@@ -140,7 +140,7 @@ async def main_stdio(config_path: str = None):
         await app.run(read_stream, write_stream, app.create_initialization_options())
 
 
-async def main_http(port: int = 8767, config_path: str = None):
+def main_http(port: int = 8767, config_path: str = None):
     """Run MCP server with HTTP transport."""
     try:
         from mcp.server.fastmcp import FastMCP
@@ -152,6 +152,9 @@ async def main_http(port: int = 8767, config_path: str = None):
     
     # Create FastMCP wrapper
     mcp_app = FastMCP("modeller-checker")
+    
+    # Configure port
+    mcp_app.settings.port = port
     
     # Register tool
     @mcp_app.tool()
@@ -190,8 +193,8 @@ Iterations: {result['iterations']}
         
         return response
     
-    print(f"Starting MCP server on http://localhost:{port}")
-    await mcp_app.run(port=port)
+    print(f"Starting MCP server on http://{mcp_app.settings.host}:{port}", file=sys.stderr)
+    mcp_app.run(transport="streamable-http")
 
 
 def main():
@@ -253,7 +256,7 @@ def main():
         if args.stdio:
             asyncio.run(main_stdio(args.config))
         else:
-            asyncio.run(main_http(args.http_port, args.config))
+            main_http(args.http_port, args.config)
     except Exception as e:
         print(f"FATAL ERROR: {e}", file=sys.stderr)
         import traceback
