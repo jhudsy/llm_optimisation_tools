@@ -137,8 +137,21 @@ class MiniZincSolver:
                 result = instance.solve()
 
                 if result.status == minizinc_external.Status.OPTIMAL_SOLUTION or result.status == minizinc_external.Status.SATISFIED:
-                    # Try multiple approaches to extract variables from result
-                    if hasattr(result, "__getitem__"):
+                    # Extract variables from result.solution if available
+                    if hasattr(result, "solution") and result.solution is not None:
+                        solution = result.solution
+                        # Get objective value from solution first
+                        if hasattr(solution, "objective") and solution.objective is not None:
+                            objective_value = float(solution.objective)
+                        
+                        # Extract all public attributes from solution as variables
+                        if hasattr(solution, "__dict__"):
+                            for key, value in solution.__dict__.items():
+                                if not key.startswith("_") and key != "objective":
+                                    variables[key] = value
+                    
+                    # If no solution object or no variables, try result directly
+                    if not variables and hasattr(result, "__getitem__"):
                         # Approach 1: Try iterating over model items
                         if hasattr(model, "items"):
                             for item in getattr(model, "items", []):
@@ -150,7 +163,7 @@ class MiniZincSolver:
                                     pass
                         
                         # Approach 2: Try direct access via variable names from the model
-                        if hasattr(model, "variables"):
+                        if not variables and hasattr(model, "variables"):
                             for var in getattr(model, "variables", []):
                                 try:
                                     var_name = getattr(var, "name", None) or str(var)
@@ -159,16 +172,8 @@ class MiniZincSolver:
                                 except (KeyError, AttributeError, TypeError):
                                     pass
                     
-                    # Approach 3: Try to access result as a dictionary-like object
-                    if not variables and hasattr(result, "__dict__"):
-                        try:
-                            for key, value in result.__dict__.items():
-                                if not key.startswith("_"):
-                                    variables[key] = value
-                        except (AttributeError, TypeError):
-                            pass
-                    
-                    if hasattr(result, "objective") and result.objective is not None:
+                    # Fallback to result.objective if not already set
+                    if objective_value is None and hasattr(result, "objective") and result.objective is not None:
                         objective_value = float(result.objective)
                 status_str = result.status.name if hasattr(result.status, "name") else str(result.status)
             else:
@@ -263,8 +268,21 @@ class MiniZincSolver:
                 result = await instance.solve_async()
 
                 if result.status == minizinc_external.Status.OPTIMAL_SOLUTION or result.status == minizinc_external.Status.SATISFIED:
-                    # Try multiple approaches to extract variables from result
-                    if hasattr(result, "__getitem__"):
+                    # Extract variables from result.solution if available
+                    if hasattr(result, "solution") and result.solution is not None:
+                        solution = result.solution
+                        # Get objective value from solution first
+                        if hasattr(solution, "objective") and solution.objective is not None:
+                            objective_value = float(solution.objective)
+                        
+                        # Extract all public attributes from solution as variables
+                        if hasattr(solution, "__dict__"):
+                            for key, value in solution.__dict__.items():
+                                if not key.startswith("_") and key != "objective":
+                                    variables[key] = value
+                    
+                    # If no solution object or no variables, try result directly
+                    if not variables and hasattr(result, "__getitem__"):
                         # Approach 1: Try iterating over model items
                         if hasattr(model, "items"):
                             for item in getattr(model, "items", []):
@@ -276,7 +294,7 @@ class MiniZincSolver:
                                     pass
                         
                         # Approach 2: Try direct access via variable names from the model
-                        if hasattr(model, "variables"):
+                        if not variables and hasattr(model, "variables"):
                             for var in getattr(model, "variables", []):
                                 try:
                                     var_name = getattr(var, "name", None) or str(var)
@@ -285,16 +303,8 @@ class MiniZincSolver:
                                 except (KeyError, AttributeError, TypeError):
                                     pass
                     
-                    # Approach 3: Try to access result as a dictionary-like object
-                    if not variables and hasattr(result, "__dict__"):
-                        try:
-                            for key, value in result.__dict__.items():
-                                if not key.startswith("_"):
-                                    variables[key] = value
-                        except (AttributeError, TypeError):
-                            pass
-                    
-                    if hasattr(result, "objective") and result.objective is not None:
+                    # Fallback to result.objective if not already set
+                    if objective_value is None and hasattr(result, "objective") and result.objective is not None:
                         objective_value = float(result.objective)
                 status_str = result.status.name if hasattr(result.status, "name") else str(result.status)
             else:
