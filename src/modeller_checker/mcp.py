@@ -41,10 +41,18 @@ def load_server_config(config_path: str = None):
     """Load configuration and initialize LLMs."""
     global _config, _modeller_llm, _checker_llm, _validate_tool, _solve_tool
     
-    _config = load_config(config_path)
-    _modeller_llm, _checker_llm = create_llms_from_config(config_path)
-    _validate_tool = create_validate_minizinc_tool()
-    _solve_tool = create_solve_minizinc_tool()
+    try:
+        _config = load_config(config_path)
+        _modeller_llm, _checker_llm = create_llms_from_config(config_path)
+        _validate_tool = create_validate_minizinc_tool()
+        _solve_tool = create_solve_minizinc_tool()
+    except Exception as e:
+        print(f"ERROR: Failed to load configuration: {e}", file=sys.stderr)
+        print(f"Config path: {config_path or 'default (repo_root/config.yaml)'}", file=sys.stderr)
+        print(f"Working directory: {Path.cwd()}", file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        raise
 
 
 @app.list_tools()
@@ -188,6 +196,13 @@ Iterations: {result['iterations']}
 
 def main():
     """CLI entry point."""
+    import logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        stream=sys.stderr
+    )
+    
     parser = argparse.ArgumentParser(
         description="MCP Server for Modeller-Checker Workflow"
     )
@@ -212,8 +227,19 @@ def main():
         type=str,
         help="Path to config.yaml (default: repo_root/config.yaml)",
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug output",
+    )
     
     args = parser.parse_args()
+    
+    if args.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+        print(f"DEBUG: Working directory: {Path.cwd()}", file=sys.stderr)
+        print(f"DEBUG: Python path: {sys.path[:3]}", file=sys.stderr)
+        print(f"DEBUG: Config path: {args.config or 'default'}", file=sys.stderr)
     
     if args.stdio and args.http:
         print("Error: Cannot use both --stdio and --http", file=sys.stderr)
@@ -223,10 +249,16 @@ def main():
         # Default to stdio
         args.stdio = True
     
-    if args.stdio:
-        asyncio.run(main_stdio(args.config))
-    else:
-        asyncio.run(main_http(args.http_port, args.config))
+    try:
+        if args.stdio:
+            asyncio.run(main_stdio(args.config))
+        else:
+            asyncio.run(main_http(args.http_port, args.config))
+    except Exception as e:
+        print(f"FATAL ERROR: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
