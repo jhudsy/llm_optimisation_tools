@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "optimise-mcp"
+version = "0.1.0"
+description = "Model Context Protocol server that helps LLMs emit and solve LP/MILP models via HiGHS."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+  { name = "optimise-mcp maintainers" }
+]
+keywords = ["mcp", "optimization", "ollama", "lp", "milp"]
+license = { text = "MIT" }
+dependencies = [
+  "langchain-mcp-adapters>=0.1.0",
+  "langchain-ollama>=0.1.0",
+  "langchain>=0.3.0",
+  "fastmcp>=2.14.0",
+  "highspy>=1.7",
+  "pydantic>=2.8",
+  "pyyaml>=6.0"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "ruff>=0.6"
+]
+
+[project.scripts]
+optimise-mcp = "optimise_mcp.server:run"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+pythonpath = ["src"]

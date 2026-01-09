@@ -1,0 +1,65 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.env
+.env.*
+
+# Distribution / packaging
+build/
+dist/
+.eggs/
+*.egg-info/
+*.egg
+.installed.cfg
+*.whl
+
+# Tooling
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.uv/
+.tox/
+
+# Logs and artifacts
+*.log
+logs/
+*.out
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Solver artifacts
+*.mps
+*.sol
+*.lp.tmp
+*.mzn.tmp
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+
+# API keys and secrets (backup protection)
+*.key
+*secret*
+api_keys.txt
+
+# MCP specific
+mcp_server.log

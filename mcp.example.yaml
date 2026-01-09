@@ -1,0 +1,15 @@
+# Example configuration for Ollama's MCP integration.
+# Save this file as ~/.ollama/mcp.yaml (or merge with an existing config) and
+# restart Ollama to register the optimise-mcp server.
+servers:
+  - name: optimise-mcp
+    command: "/Users/csc342/scratch/optimise_mcp/.venv/bin/python -m optimise_mcp.server --stdio"
+    env:
+      OPTIMISE_MCP_LOG_LEVEL: info
+    instructions: |
+      This server exposes a single tool named solve_lp that expects complete
+      .lp bodies (Maximize/Subject To/Bounds/End) and solves them with HiGHS.
+      Restate the brief, draft the LP inline, call solve_lp once, then report
+      the solver status, objective value, and decision variables verbatim.
+      Switch the command to "... --http --http-port 8765" if your host prefers
+      talking to optimise-mcp over HTTP instead of stdio.

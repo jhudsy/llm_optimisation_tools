@@ -1,0 +1,138 @@
+# Optimise-MCP Configuration File
+# This file configures all components: LP solver, MiniZinc solver, and Modeller-Checker workflow
+
+# =============================================================================
+# LP/MILP Solver Configuration
+# =============================================================================
+mathprog:
+  solver:
+    backend: "highs"  # Options: highs (only option currently supported)
+    time_limit: 60    # seconds
+  
+  mcp_server:
+    stdio_enabled: true
+    http_enabled: true
+    http_host: "127.0.0.1"
+    http_port: 8765
+    log_level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  
+  validation:
+    max_variables: 10000
+    max_constraints: 10000
+  
+  performance:
+    max_parallel_solvers: 5  # Max concurrent solver instances for LangChain tools
+
+# =============================================================================
+# MiniZinc Solver Configuration
+# =============================================================================
+mzn:
+  solver:
+    backend: "coinbc"  # Options: coinbc, gecode, chuffed, or-tools, etc.
+    use_python_bindings: true  # If false, falls back to CLI
+    time_limit: 60  # seconds
+  
+  mcp_server:
+    stdio_enabled: true
+    http_enabled: true
+    http_host: "127.0.0.1"
+    http_port: 8766
+    log_level: "INFO"
+  
+  validation:
+    strict_mode: false  # Stricter validation rules
+  
+  performance:
+    max_parallel_solvers: 5  # Max concurrent solver instances for LangChain tools
+
+# =============================================================================
+# Modeller-Checker Workflow Configuration
+# =============================================================================
+modeller_checker:
+  # Modeller LLM Configuration
+  modeller:
+    provider: "ollama"  # Options: ollama, openai, anthropic, azure
+    model: "qwen3"
+    base_url: "http://127.0.0.1:11434"  # For Ollama
+    temperature: 0.5
+    # api_key: "${OPENAI_API_KEY}"  # For cloud providers (use env var)
+    # max_tokens: 2000
+  
+  # Checker LLM Configuration
+  checker:
+    provider: "ollama"
+    model: "qwen3"  # Can be different from modeller
+    base_url: "http://127.0.0.1:11434"
+    temperature: 0.3
+    # api_key: "${ANTHROPIC_API_KEY}"
+    # max_tokens: 1500
+  
+  # Workflow Settings
+  workflow:
+    max_iterations: 5
+    verbose: false
+    solver_backend: "mzn"  # Options: mzn, mathprog (future)
+  
+  # MCP Server Settings
+  mcp_server:
+    stdio_enabled: true
+    http_enabled: true
+    http_host: "127.0.0.1"
+    http_port: 8767
+    log_level: "INFO"
+  
+  # LLM Defaults (used when not specified in modeller/checker)
+  llm_defaults:
+    default_max_tokens: 2048
+    default_temperature: 0.5
+
+# =============================================================================
+# Global Settings
+# =============================================================================
+global:
+  log_level: "INFO"
+  log_file: null  # Set to a path to enable file logging
+  debug_mode: false
+
+# =============================================================================
+# Example Cloud Provider Configurations
+# =============================================================================
+
+# OpenAI Configuration Example:
+# modeller_checker:
+#   modeller:
+#     provider: "openai"
+#     model: "gpt-4"
+#     api_key: "${OPENAI_API_KEY}"
+#     temperature: 0.5
+#     max_tokens: 2000
+
+# Anthropic Configuration Example:
+# modeller_checker:
+#   checker:
+#     provider: "anthropic"
+#     model: "claude-3-sonnet-20240229"
+#     api_key: "${ANTHROPIC_API_KEY}"
+#     temperature: 0.3
+#     max_tokens: 1500
+
+# Azure OpenAI Configuration Example:
+# modeller_checker:
+#   modeller:
+#     provider: "azure"
+#     model: "gpt-4"
+#     api_key: "${AZURE_OPENAI_API_KEY}"
+#     azure_endpoint: "https://your-resource.openai.azure.com/"
+#     api_version: "2024-02-15-preview"
+#     temperature: 0.5
+
+# =============================================================================
+# MiniZinc Solver Backend Options
+# =============================================================================
+# Available MiniZinc solvers (if installed):
+# - coinbc: Coin-OR Branch and Cut (default, good for MILP)
+# - gecode: Gecode constraint solver (good for CP)
+# - chuffed: Lazy clause generation solver
+# - or-tools: Google OR-Tools
+# To see available solvers: minizinc --solvers
+
