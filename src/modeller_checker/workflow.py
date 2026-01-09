@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 import json
 import re
+import logging
 from typing import Optional, Any
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, BaseMessage
@@ -19,6 +20,8 @@ from langchain_core.language_models import BaseChatModel
 # Add src to path for imports
 repo_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo_root / "src"))
+
+LOGGER = logging.getLogger("modeller_checker.workflow")
 
 
 MODELLER_SYSTEM_PROMPT = """You are an expert MiniZinc modelling assistant. Your role is to:
@@ -182,10 +185,17 @@ async def run_modeller_checker_workflow(
         if verbose:
             print(f"Modeller input: {modeller_messages[-1].content[:200]}...")
         
+        LOGGER.debug(f"=== MODELLER INPUT (Iteration {iteration + 1}) ===")
+        LOGGER.debug(f"System: {MODELLER_SYSTEM_PROMPT[:200]}...")
+        LOGGER.debug(f"User: {modeller_messages[-1].content}")
+        
         modeller_response: AIMessage = await modeller_llm.ainvoke(modeller_messages)
         
+        content_str = stringify_content(modeller_response.content)
+        LOGGER.debug(f"=== MODELLER OUTPUT (Iteration {iteration + 1}) ===")
+        LOGGER.debug(f"{content_str}")
+        
         if verbose:
-            content_str = stringify_content(modeller_response.content)
             print(f"Modeller response:\n{content_str[:500]}\n")
         
         # Parse modeller response
@@ -253,10 +263,17 @@ async def run_modeller_checker_workflow(
         if verbose:
             print(f"Checker analyzing model against problem...")
         
+        LOGGER.debug(f"=== CHECKER INPUT (Iteration {iteration + 1}) ===")
+        LOGGER.debug(f"System: {CHECKER_SYSTEM_PROMPT[:200]}...")
+        LOGGER.debug(f"User: {checker_messages[-1].content}")
+        
         checker_response: AIMessage = await checker_llm.ainvoke(checker_messages)
         
+        content_str = stringify_content(checker_response.content)
+        LOGGER.debug(f"=== CHECKER OUTPUT (Iteration {iteration + 1}) ===")
+        LOGGER.debug(f"{content_str}")
+        
         if verbose:
-            content_str = stringify_content(checker_response.content)
             print(f"Checker response:\n{content_str[:500]}\n")
         
         # Parse checker response
