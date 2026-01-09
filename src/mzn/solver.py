@@ -136,7 +136,7 @@ class MiniZincSolver:
 
                 result = instance.solve()
 
-                if result.status == minizinc_external.Status.OPTIMAL_FOUND or result.status == minizinc_external.Status.SATISFIED:
+                if result.status == minizinc_external.Status.OPTIMAL_SOLUTION or result.status == minizinc_external.Status.SATISFIED:
                     if hasattr(result, "__getitem__") and hasattr(model, "items"):
                         for item in getattr(model, "items", []):
                             try:
