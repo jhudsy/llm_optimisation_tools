@@ -137,14 +137,37 @@ class MiniZincSolver:
                 result = instance.solve()
 
                 if result.status == minizinc_external.Status.OPTIMAL_SOLUTION or result.status == minizinc_external.Status.SATISFIED:
-                    if hasattr(result, "__getitem__") and hasattr(model, "items"):
-                        for item in getattr(model, "items", []):
-                            try:
-                                var_name = getattr(item, "name", None)
-                                if var_name:
-                                    variables[var_name] = result[var_name]
-                            except (KeyError, AttributeError):
-                                pass
+                    # Try multiple approaches to extract variables from result
+                    if hasattr(result, "__getitem__"):
+                        # Approach 1: Try iterating over model items
+                        if hasattr(model, "items"):
+                            for item in getattr(model, "items", []):
+                                try:
+                                    var_name = getattr(item, "name", None)
+                                    if var_name and not var_name.startswith("_"):
+                                        variables[var_name] = result[var_name]
+                                except (KeyError, AttributeError, TypeError):
+                                    pass
+                        
+                        # Approach 2: Try direct access via variable names from the model
+                        if hasattr(model, "variables"):
+                            for var in getattr(model, "variables", []):
+                                try:
+                                    var_name = getattr(var, "name", None) or str(var)
+                                    if var_name and not var_name.startswith("_"):
+                                        variables[var_name] = result[var_name]
+                                except (KeyError, AttributeError, TypeError):
+                                    pass
+                    
+                    # Approach 3: Try to access result as a dictionary-like object
+                    if not variables and hasattr(result, "__dict__"):
+                        try:
+                            for key, value in result.__dict__.items():
+                                if not key.startswith("_"):
+                                    variables[key] = value
+                        except (AttributeError, TypeError):
+                            pass
+                    
                     if hasattr(result, "objective") and result.objective is not None:
                         objective_value = float(result.objective)
                 status_str = result.status.name if hasattr(result.status, "name") else str(result.status)
@@ -240,14 +263,37 @@ class MiniZincSolver:
                 result = await instance.solve_async()
 
                 if result.status == minizinc_external.Status.OPTIMAL_SOLUTION or result.status == minizinc_external.Status.SATISFIED:
-                    if hasattr(result, "__getitem__") and hasattr(model, "items"):
-                        for item in getattr(model, "items", []):
-                            try:
-                                var_name = getattr(item, "name", None)
-                                if var_name:
-                                    variables[var_name] = result[var_name]
-                            except (KeyError, AttributeError):
-                                pass
+                    # Try multiple approaches to extract variables from result
+                    if hasattr(result, "__getitem__"):
+                        # Approach 1: Try iterating over model items
+                        if hasattr(model, "items"):
+                            for item in getattr(model, "items", []):
+                                try:
+                                    var_name = getattr(item, "name", None)
+                                    if var_name and not var_name.startswith("_"):
+                                        variables[var_name] = result[var_name]
+                                except (KeyError, AttributeError, TypeError):
+                                    pass
+                        
+                        # Approach 2: Try direct access via variable names from the model
+                        if hasattr(model, "variables"):
+                            for var in getattr(model, "variables", []):
+                                try:
+                                    var_name = getattr(var, "name", None) or str(var)
+                                    if var_name and not var_name.startswith("_"):
+                                        variables[var_name] = result[var_name]
+                                except (KeyError, AttributeError, TypeError):
+                                    pass
+                    
+                    # Approach 3: Try to access result as a dictionary-like object
+                    if not variables and hasattr(result, "__dict__"):
+                        try:
+                            for key, value in result.__dict__.items():
+                                if not key.startswith("_"):
+                                    variables[key] = value
+                        except (AttributeError, TypeError):
+                            pass
+                    
                     if hasattr(result, "objective") and result.objective is not None:
                         objective_value = float(result.objective)
                 status_str = result.status.name if hasattr(result.status, "name") else str(result.status)
