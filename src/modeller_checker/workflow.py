@@ -282,7 +282,7 @@ async def run_modeller_checker_workflow(
             if verbose:
                 print("\n[SOLVE PHASE]")
             
-            solve_result = solve_tool.invoke({"mzn_code": current_mzn_code})
+            solve_result = await solve_tool.invoke_async({"mzn_code": current_mzn_code})
             
             if verbose:
                 print(f"Solve result: {solve_result}")
