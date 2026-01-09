@@ -131,10 +131,11 @@ class MiniZincSolver:
                 model.add_string(mzn_blob)
 
                 instance = minizinc_external.Instance(solver, model)
-                if effective_time_limit is not None:
-                    instance.options["time_limit"] = int(effective_time_limit * 1000)  # ms
-
-                result = instance.solve()
+                
+                # Pass time_limit as timedelta to solve method
+                from datetime import timedelta
+                time_limit_arg = timedelta(seconds=effective_time_limit) if effective_time_limit is not None else None
+                result = instance.solve(time_limit=time_limit_arg)
 
                 if result.status == minizinc_external.Status.OPTIMAL_SOLUTION or result.status == minizinc_external.Status.SATISFIED:
                     # Extract variables from result.solution if available
@@ -261,11 +262,13 @@ class MiniZincSolver:
                 model.add_string(mzn_blob)
 
                 instance = minizinc_external.Instance(solver, model)
-                if effective_time_limit is not None:
-                    instance.options["time_limit"] = int(effective_time_limit * 1000)  # ms
-
+                
+                # Pass time_limit as timedelta to solve_async method
+                from datetime import timedelta
+                time_limit_arg = timedelta(seconds=effective_time_limit) if effective_time_limit is not None else None
+                
                 # Use async solve method
-                result = await instance.solve_async()
+                result = await instance.solve_async(time_limit=time_limit_arg)
 
                 if result.status == minizinc_external.Status.OPTIMAL_SOLUTION or result.status == minizinc_external.Status.SATISFIED:
                     # Extract variables from result.solution if available
