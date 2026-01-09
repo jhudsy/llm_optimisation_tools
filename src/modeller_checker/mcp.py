@@ -220,10 +220,24 @@ def main():
     args = parser.parse_args()
     
     if args.debug:
-        logging.getLogger().setLevel(logging.DEBUG)
+        # Enable debug logging for our modules only
+        logging.getLogger("modeller_checker").setLevel(logging.DEBUG)
+        logging.getLogger("mzn").setLevel(logging.DEBUG)
+        logging.getLogger("mathprog").setLevel(logging.DEBUG)
+        logging.getLogger("langchain_optimise").setLevel(logging.DEBUG)
+        logging.getLogger("mcp.server").setLevel(logging.DEBUG)
+        # Suppress verbose logging from dependencies
+        logging.getLogger("fakeredis").setLevel(logging.WARNING)
+        logging.getLogger("docket.worker").setLevel(logging.WARNING)
+        logging.getLogger("urllib3").setLevel(logging.WARNING)
         print(f"DEBUG: Working directory: {Path.cwd()}", file=sys.stderr)
         print(f"DEBUG: Python path: {sys.path[:3]}", file=sys.stderr)
         print(f"DEBUG: Config path: {args.config or 'default'}", file=sys.stderr)
+    else:
+        # Suppress debug from dependencies in normal mode
+        logging.getLogger("fakeredis").setLevel(logging.WARNING)
+        logging.getLogger("docket.worker").setLevel(logging.WARNING)
+        logging.getLogger("urllib3").setLevel(logging.WARNING)
     
     if args.stdio and args.http:
         print("Error: Cannot use both --stdio and --http", file=sys.stderr)
