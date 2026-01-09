@@ -185,10 +185,14 @@ class MiniZincSolver:
                 for name, value in list(variables.items())[:10]:
                     summary_lines.append(f"  {name} = {value}")
 
+            # Map status to success/failure
+            is_success = status_str in ("OPTIMAL_SOLUTION", "SATISFIED", "success")
+            run_status = "success" if is_success else "failed"
+
             return MiniZincSolverResult(
                 solver_name="minizinc",
                 solver_backend=self.solver_backend,
-                run_status=status_str,
+                run_status=run_status,
                 objective_value=objective_value,
                 variables=variables,
                 summary="\n".join(summary_lines),
@@ -235,7 +239,7 @@ class MiniZincSolver:
                 # Use async solve method
                 result = await instance.solve_async()
 
-                if result.status == minizinc_external.Status.OPTIMAL_FOUND or result.status == minizinc_external.Status.SATISFIED:
+                if result.status == minizinc_external.Status.OPTIMAL_SOLUTION or result.status == minizinc_external.Status.SATISFIED:
                     if hasattr(result, "__getitem__") and hasattr(model, "items"):
                         for item in getattr(model, "items", []):
                             try:
@@ -290,10 +294,14 @@ class MiniZincSolver:
                 for name, value in list(variables.items())[:10]:
                     summary_lines.append(f"  {name} = {value}")
 
+            # Map status to success/failure
+            is_success = status_str in ("OPTIMAL_SOLUTION", "SATISFIED", "success")
+            run_status = "success" if is_success else "failed"
+
             return MiniZincSolverResult(
                 solver_name="minizinc",
                 solver_backend=self.solver_backend,
-                run_status=status_str,
+                run_status=run_status,
                 objective_value=objective_value,
                 variables=variables,
                 summary="\n".join(summary_lines),
