@@ -14,9 +14,8 @@ from pathlib import Path
 repo_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo_root / "src"))
 
-from mcp.server import Server
-from mcp.server.stdio import stdio_server
-from mcp.types import Tool, TextContent
+from fastmcp import FastMCP
+from langchain_core.messages import BaseMessage
 
 from modeller_checker.config import load_config, create_llms_from_config
 from modeller_checker.workflow import run_modeller_checker_workflow
@@ -27,10 +26,7 @@ from langchain_optimise.minizinc_tools import (
 )
 
 
-# Global server instance
-app = Server("modeller-checker")
-
-# Global config and LLMs (loaded on server start)
+# Global configuration
 _config = None
 _modeller_llm = None
 _checker_llm = None
@@ -135,43 +131,25 @@ Final Response:
 
 async def main_stdio(config_path: str = None):
     """Run MCP server with stdio transport."""
-    load_server_config(config_path)
-    
-    async with stdio_server() as (read_stream, write_stream):
-        await app.run(read_stream, write_stream, app.create_initialization_options())
-
-
-def main_http(port: int = 8767, config_path: str = None):
-    """Run MCP server with HTTP transport."""
-    try:
-        from mcp.server.fastmcp import FastMCP
-    except ImportError:
-        print("FastMCP not installed. Install with: pip install mcp[server]", file=sys.stderr)
-        sys.exit(1)
+    from fastmcp import FastMCP
     
     load_server_config(config_path)
     
-    # Create FastMCP wrapper
+    # Create FastMCP server
     mcp_app = FastMCP("modeller-checker")
     
-    # Configure port
-    mcp_app.settings.port = port
-    
-    # For HTTP transport, create an async wrapper around the solve tool
-    # that can be awaited in the async workflow
-    class AsyncSolveToolWrapper:
-        """Wraps the sync solve tool to work in async context."""
-        def __init__(self, sync_tool):
-            self.sync_tool = sync_tool
+    # Register tool with wrapper for sync invoke
+    class SyncToolWrapper:
+        """Wraps sync tool to work in async context."""
+        def __init__(self, tool):
+            self.tool = tool
         
-        async def invoke(self, input_dict):
-            """Invoke the tool, wrapping sync call in async."""
+        async def invoke_async(self, input_dict):
             loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(None, lambda: self.sync_tool.invoke(input_dict))
+            return await loop.run_in_executor(None, lambda: self.tool.invoke(input_dict))
     
-    async_solve_tool = AsyncSolveToolWrapper(_solve_tool)
+    async_solve_tool = SyncToolWrapper(_solve_tool)
     
-    # Register tool
     @mcp_app.tool()
     async def modeller_checker_workflow(problem: str, max_iterations: int = 5) -> str:
         """
@@ -208,8 +186,73 @@ Iterations: {result['iterations']}
         
         return response
     
-    print(f"Starting MCP server on http://{mcp_app.settings.host}:{port}", file=sys.stderr)
-    mcp_app.run(transport="streamable-http")
+    await mcp_app.run_stdio_async(show_banner=False)
+
+
+async def main_http(port: int = 8767, config_path: str = None):
+    """Run MCP server with HTTP transport."""
+    from fastmcp import FastMCP
+    
+    load_server_config(config_path)
+    
+    # Create FastMCP server
+    mcp_app = FastMCP("modeller-checker")
+    
+    # Register tool with wrapper for sync invoke
+    class SyncToolWrapper:
+        """Wraps sync tool to work in async context."""
+        def __init__(self, tool):
+            self.tool = tool
+        
+        async def invoke_async(self, input_dict):
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, lambda: self.tool.invoke(input_dict))
+    
+    async_solve_tool = SyncToolWrapper(_solve_tool)
+    
+    @mcp_app.tool()
+    async def modeller_checker_workflow(problem: str, max_iterations: int = 5) -> str:
+        """
+        Dual-agent workflow for optimization problem modeling.
+        
+        Args:
+            problem: Natural language problem description
+            max_iterations: Max refinement iterations
+        
+        Returns:
+            Solution with MiniZinc model and optimal values
+        """
+        verbose = _config.get("workflow", {}).get("verbose", False)
+        
+        result = await run_modeller_checker_workflow(
+            problem=problem,
+            modeller_llm=_modeller_llm,
+            checker_llm=_checker_llm,
+            validate_tool=_validate_tool,
+            solve_tool=async_solve_tool,
+            max_iterations=max_iterations,
+            verbose=verbose,
+        )
+        
+        response = f"""Success: {result['success']}
+Checker Approval: {result['checker_approval']}
+Iterations: {result['iterations']}
+
+{result['final_response']}
+"""
+        
+        if result['mzn_code']:
+            response += f"\nMiniZinc Model:\n{result['mzn_code']}"
+        
+        return response
+    
+    await mcp_app.run_http_async(
+        transport="streamable-http",
+        host="127.0.0.1",
+        port=port,
+        path="/mcp",
+        show_banner=False,
+    )
 
 
 def main():
@@ -271,7 +314,7 @@ def main():
         if args.stdio:
             asyncio.run(main_stdio(args.config))
         else:
-            main_http(args.http_port, args.config)
+            asyncio.run(main_http(args.http_port, args.config))
     except Exception as e:
         print(f"FATAL ERROR: {e}", file=sys.stderr)
         import traceback
