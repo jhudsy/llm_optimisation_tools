@@ -132,6 +132,43 @@ def validate_minizinc_text(mzn_code: str) -> List[MiniZincValidationIssue]:
                     line_content=raw_line,
                 )
             )
+    
+    # Check for invalid type declarations with constraints like: var int >= 0:
+    for idx, raw_line in enumerate(lines, start=1):
+        line = raw_line.split("%")[0].strip()
+        if re.search(r"\bvar\s+(int|float|bool)\s*(>=|<=|>|<)\s*", line):
+            issues.append(
+                MiniZincValidationIssue(
+                    line_number=idx,
+                    message=(
+                        "Invalid variable declaration syntax. Use 'var domain: name;' where domain is a range. "
+                        "Example: 'var 0..100: x;' not 'var int >= 0: x;'. "
+                        "Use 'constraint x >= 0;' for additional constraints."
+                    ),
+                    line_content=raw_line,
+                )
+            )
+    
+    # Check for missing multiplication operators (letter immediately followed by letter/digit)
+    # e.g., "8A + 2B" instead of "8*A + 2*B"
+    for idx, raw_line in enumerate(lines, start=1):
+        line = raw_line.split("%")[0]  # Remove comments
+        # Look for patterns like: digit directly followed by letter (e.g., "8A" without the *)
+        # But avoid false positives from function names and keywords
+        if re.search(r'\b\d+[a-zA-Z_]\w*\b', line):
+            # Double-check it's not a valid construct
+            if not re.search(r'\b(e|E)\d', line):  # Skip scientific notation like 1e5
+                issues.append(
+                    MiniZincValidationIssue(
+                        line_number=idx,
+                        message=(
+                            "Missing multiplication operator (*) detected. "
+                            "Example: '8A + 2B' should be '8*A + 2*B'. "
+                            "All coefficient-variable products must use the * operator."
+                        ),
+                        line_content=raw_line,
+                    )
+                )
 
     # Check for minimum model structure
     code_lower = mzn_code.lower()
