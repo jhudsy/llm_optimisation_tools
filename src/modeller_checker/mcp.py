@@ -23,6 +23,7 @@ from modeller_checker.workflow import run_modeller_checker_workflow
 from langchain_optimise.minizinc_tools import (
     create_validate_minizinc_tool,
     create_solve_minizinc_tool,
+    create_solve_minizinc_tool_async,
 )
 
 
@@ -156,6 +157,20 @@ def main_http(port: int = 8767, config_path: str = None):
     # Configure port
     mcp_app.settings.port = port
     
+    # For HTTP transport, create an async wrapper around the solve tool
+    # that can be awaited in the async workflow
+    class AsyncSolveToolWrapper:
+        """Wraps the sync solve tool to work in async context."""
+        def __init__(self, sync_tool):
+            self.sync_tool = sync_tool
+        
+        async def invoke(self, input_dict):
+            """Invoke the tool, wrapping sync call in async."""
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, lambda: self.sync_tool.invoke(input_dict))
+    
+    async_solve_tool = AsyncSolveToolWrapper(_solve_tool)
+    
     # Register tool
     @mcp_app.tool()
     async def modeller_checker_workflow(problem: str, max_iterations: int = 5) -> str:
@@ -176,7 +191,7 @@ def main_http(port: int = 8767, config_path: str = None):
             modeller_llm=_modeller_llm,
             checker_llm=_checker_llm,
             validate_tool=_validate_tool,
-            solve_tool=_solve_tool,
+            solve_tool=async_solve_tool,
             max_iterations=max_iterations,
             verbose=verbose,
         )

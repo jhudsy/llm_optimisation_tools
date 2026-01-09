@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Callable
@@ -164,6 +165,111 @@ class MiniZincSolver:
                     cmd += ["-t", str(int(effective_time_limit * 1000))]  # ms
                 cmd += [mzn_path]
                 proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                stdout = proc.stdout.strip()
+                stderr = proc.stderr.strip()
+                if proc.returncode != 0:
+                    raise RuntimeError(f"MiniZinc CLI failed (code {proc.returncode}): {stderr or stdout}")
+                # Parse simple name=value pairs from output
+                for line in stdout.splitlines():
+                    m = re.match(r"\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)\s*", line)
+                    if m:
+                        name, val = m.group(1), m.group(2)
+                        variables[name] = val
+                status_str = "success" if variables else "success"
+
+            summary_lines = [f"MiniZinc solve completed with status: {status_str}"]
+            if objective_value is not None:
+                summary_lines.append(f"Objective value = {objective_value}")
+            if variables:
+                summary_lines.append("Variables (first 10 shown):")
+                for name, value in list(variables.items())[:10]:
+                    summary_lines.append(f"  {name} = {value}")
+
+            return MiniZincSolverResult(
+                solver_name="minizinc",
+                solver_backend=self.solver_backend,
+                run_status=status_str,
+                objective_value=objective_value,
+                variables=variables,
+                summary="\n".join(summary_lines),
+            ).to_payload()
+
+        except Exception as exc:
+            raise RuntimeError(f"MiniZinc solver failed: {exc}") from exc
+
+    async def solve_async(self, mzn_code: str, *, time_limit: Optional[float] = None) -> dict:
+        """Solve a MiniZinc model asynchronously.
+        
+        This version is compatible with running inside an async event loop
+        (e.g., HTTP MCP server). Uses solve_async() from minizinc Python bindings.
+
+        Args:
+            mzn_code: MiniZinc model code as string
+            time_limit: Optional override for solver time limit in seconds
+
+        Returns:
+            Dictionary with solver results and variable assignments
+        """
+        mzn_blob = (mzn_code or "").strip()
+        if not mzn_blob:
+            raise ValueError("mzn_code must be a non-empty MiniZinc model string.")
+
+        # Determine effective time limit
+        effective_time_limit = time_limit or self.time_limit
+
+        try:
+            objective_value = None
+            variables: Dict[str, Any] = {}
+            status_str = "Unknown"
+
+            if self._use_python_api:
+                # Python API path with async support
+                solver = minizinc_external.Solver.lookup(self.solver_backend)
+                model = minizinc_external.Model()
+                model.add_string(mzn_blob)
+
+                instance = minizinc_external.Instance(solver, model)
+                if effective_time_limit is not None:
+                    instance.options["time_limit"] = int(effective_time_limit * 1000)  # ms
+
+                # Use async solve method
+                result = await instance.solve_async()
+
+                if result.status == minizinc_external.Status.OPTIMAL_FOUND or result.status == minizinc_external.Status.SATISFIED:
+                    if hasattr(result, "__getitem__") and hasattr(model, "items"):
+                        for item in getattr(model, "items", []):
+                            try:
+                                var_name = getattr(item, "name", None)
+                                if var_name:
+                                    variables[var_name] = result[var_name]
+                            except (KeyError, AttributeError):
+                                pass
+                    if hasattr(result, "objective") and result.objective is not None:
+                        objective_value = float(result.objective)
+                status_str = result.status.name if hasattr(result.status, "name") else str(result.status)
+            else:
+                # CLI fallback path (run in thread pool to avoid blocking)
+                import tempfile
+                import subprocess
+                import re
+
+                def run_cli():
+                    with tempfile.NamedTemporaryFile("w", suffix=".mzn", delete=False) as tf:
+                        tf.write(mzn_blob)
+                        tf.flush()
+                        mzn_path = tf.name
+                    cmd = ["minizinc"]
+                    if self.solver_backend:
+                        cmd += ["--solver", self.solver_backend]
+                    if effective_time_limit is not None:
+                        cmd += ["-t", str(int(effective_time_limit * 1000))]  # ms
+                    cmd += [mzn_path]
+                    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    return proc
+
+                loop = asyncio.get_event_loop()
+                proc = await loop.run_in_executor(None, run_cli)
+                
                 stdout = proc.stdout.strip()
                 stderr = proc.stderr.strip()
                 if proc.returncode != 0:

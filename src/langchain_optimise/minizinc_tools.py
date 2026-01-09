@@ -245,3 +245,82 @@ def create_solve_minizinc_tool(
         return payload
 
     return solve_minizinc_tool
+
+
+async def create_solve_minizinc_tool_async(
+    max_parallel_solvers: int = 5,
+    solver_factory: Optional[Callable[[], MiniZincSolver]] = None,
+) -> Callable:
+    """Create an async LangChain tool for solving MiniZinc problems.
+    
+    This version is compatible with running inside an async event loop
+    (e.g., HTTP MCP server). Uses the async solve_async() method.
+
+    Args:
+        max_parallel_solvers: Maximum number of concurrent solver instances.
+        solver_factory: Optional callable returning MiniZincSolver instances.
+                       Defaults to MiniZincSolver with coinbc backend.
+
+    Returns:
+        An async LangChain tool callable.
+    """
+    solver_quota = SolverQuota(max_parallel_solvers)
+
+    def default_solver_factory() -> MiniZincSolver:
+        return MiniZincSolver(solver_backend="coinbc")
+
+    solver_factory = solver_factory or default_solver_factory
+
+    async def solve_minizinc_tool_async(
+        mzn_code: str,
+        time_limit: Optional[float] = None,
+        solver_backend: Optional[str] = None,
+    ) -> dict:
+        """Solve a MiniZinc constraint programming problem asynchronously.
+
+        Args:
+            mzn_code: MiniZinc model code
+            time_limit: Optional solver time limit in seconds
+            solver_backend: Optional solver backend (default: coinbc)
+
+        Returns:
+            Dictionary with solver results or error message.
+        """
+        error = _require_mzn_code(mzn_code)
+        if error:
+            return error
+
+        LOGGER.info("solve_minizinc_async tool called (time_limit=%s, backend=%s)", time_limit, solver_backend)
+
+        # Validate before solving
+        validation_issues = validate_minizinc_text(mzn_code)
+        if validation_issues:
+            LOGGER.warning("MiniZinc validation failed with %s issue(s)", len(validation_issues))
+            return {
+                "error": "MiniZinc validation failed",
+                "issues": _format_validation_issues(validation_issues),
+            }
+
+        try:
+            with solver_quota.claim():
+                if solver_backend:
+                    solver = MiniZincSolver(solver_backend=solver_backend)
+                else:
+                    solver = solver_factory()
+                payload = await solver.solve_async(mzn_code, time_limit=time_limit)
+        except SolverUnavailableError as exc:
+            LOGGER.warning("%s", str(exc))
+            return {"error": str(exc)}
+        except MissingDependencyError as exc:
+            message = f"Solver dependency missing: {exc}"
+            LOGGER.error("%s", message)
+            return {"error": message}
+        except Exception as exc:
+            message = f"Solver execution failed: {exc}"
+            LOGGER.exception("Solver execution failed")
+            return {"error": message}
+
+        LOGGER.info("solve_minizinc_async completed successfully")
+        return payload
+
+    return solve_minizinc_tool_async
