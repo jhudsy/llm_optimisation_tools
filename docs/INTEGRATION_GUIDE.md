@@ -426,6 +426,13 @@ python -m src.mzn.mcp --http --http-port 8766 &
 python -m src.modeller_checker.mcp --http --http-port 8767 &
 ```
 
+**HTTP Endpoints:**
+- LP/MILP: `http://127.0.0.1:8765/mcp`
+- MiniZinc: `http://127.0.0.1:8766/mcp`
+- Modeller-Checker: `http://127.0.0.1:8767/mcp`
+
+The MCP protocol is exposed at the `/mcp` path (not the root `/`).
+
 ## Troubleshooting
 
 **Config file not found:**

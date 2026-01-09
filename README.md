@@ -283,6 +283,11 @@ python -m src.mzn.mcp --http --http-port 8766 &
 python -m src.modeller_checker.mcp --http --http-port 8767 &
 ```
 
+**Note:** HTTP servers expose the MCP endpoint at `/mcp`. Connect to:
+- LP/MILP: `http://127.0.0.1:8765/mcp`
+- MiniZinc: `http://127.0.0.1:8766/mcp`
+- Modeller-Checker: `http://127.0.0.1:8767/mcp`
+
 ## Testing
 
 ```bash
