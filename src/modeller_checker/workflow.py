@@ -317,11 +317,25 @@ async def run_modeller_checker_workflow(
                 
                 return results
             else:
+                # Solver failed - feed error back to checker/modeller for another iteration
                 if verbose:
-                    print(f"ERROR: Solver failed - {solve_result.get('summary', 'Unknown error')}")
+                    print(f"✗ Solver failed - {solve_result.get('summary', 'Unknown error')}")
+                    print("Feeding solver error back to modeller for correction...")
                 
-                results["final_response"] = f"Solver failed: {solve_result.get('summary')}"
-                return results
+                # Extract error details
+                error_summary = solve_result.get('summary', 'Unknown solver error')
+                error_details = solve_result.get('error', error_summary)
+                
+                # Create feedback that will be sent to modeller
+                current_feedback = {
+                    "issues": [
+                        f"The MiniZinc solver reported an error when executing the model: {error_details}",
+                        "Please fix the model to resolve this solver error."
+                    ]
+                }
+                
+                # Continue to next iteration instead of returning
+                continue
         
         elif action == "reject":
             issues = checker_json.get("issues", ["Unknown issue"])
