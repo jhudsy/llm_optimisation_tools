@@ -36,8 +36,8 @@ class ModellerCheckerInput(BaseModel):
         )
     )
     max_iterations: int = Field(
-        default=5,
-        description="Maximum number of modeller-checker refinement iterations"
+        default=None,
+        description="Maximum number of modeller-checker refinement iterations (uses config default if not specified)"
     )
 
 
@@ -59,23 +59,27 @@ class ModellerCheckerTool(BaseTool):
     validate_tool: Optional[object] = None
     solve_tool: Optional[object] = None
     verbose: bool = False
+    default_max_iterations: int = 5
     
     class Config:
         arbitrary_types_allowed = True
     
-    def _run(self, problem: str, max_iterations: int = 5) -> str:
+    def _run(self, problem: str, max_iterations: int = None) -> str:
         """Synchronous wrapper for async workflow."""
         return asyncio.run(self._arun(problem, max_iterations))
     
-    async def _arun(self, problem: str, max_iterations: int = 5) -> str:
+    async def _arun(self, problem: str, max_iterations: int = None) -> str:
         """Run the modeller-checker workflow asynchronously."""
+        # Use provided max_iterations or fall back to default from config
+        iterations = max_iterations if max_iterations is not None else self.default_max_iterations
+        
         result = await run_modeller_checker_workflow(
             problem=problem,
             modeller_llm=self.modeller_llm,
             checker_llm=self.checker_llm,
             validate_tool=self.validate_tool,
             solve_tool=self.solve_tool,
-            max_iterations=max_iterations,
+            max_iterations=iterations,
             verbose=self.verbose,
         )
         
@@ -118,7 +122,12 @@ def create_modeller_checker_tool(
         ... })
     """
     # Load config and create LLMs
+    config = load_config(config_path)
     modeller_llm, checker_llm = create_llms_from_config(config_path)
+    
+    # Get max_iterations from config
+    workflow_config = config.get("modeller_checker", {}).get("workflow", {})
+    default_max_iterations = workflow_config.get("max_iterations", 5)
     
     # Create validation and solver tools
     validate_tool = create_validate_minizinc_tool()
@@ -130,4 +139,5 @@ def create_modeller_checker_tool(
         validate_tool=validate_tool,
         solve_tool=solve_tool,
         verbose=verbose,
+        default_max_iterations=default_max_iterations,
     )

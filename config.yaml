@@ -69,7 +69,7 @@ modeller_checker:
   
   # Workflow Settings
   workflow:
-    max_iterations: 5
+    max_iterations: 10
     verbose: false
     solver_backend: "mzn"  # Options: mzn, mathprog (future)
   

@@ -74,18 +74,21 @@ async def main_stdio(config_path: str = None):
     async_solve_tool = SyncToolWrapper(_solve_tool)
     
     @mcp_app.tool()
-    async def modeller_checker_workflow(problem: str, max_iterations: int = 5) -> str:
+    async def modeller_checker_workflow(problem: str, max_iterations: int = None) -> str:
         """
         Dual-agent workflow for optimization problem modeling.
         
         Args:
             problem: Natural language problem description
-            max_iterations: Max refinement iterations
+            max_iterations: Max refinement iterations (default from config)
         
         Returns:
             Solution with MiniZinc model and optimal values
         """
-        verbose = _config.get("workflow", {}).get("verbose", False)
+        workflow_config = _config.get("workflow", {})
+        verbose = workflow_config.get("verbose", False)
+        # Use provided max_iterations or fall back to config value or default to 5
+        iterations = max_iterations if max_iterations is not None else workflow_config.get("max_iterations", 5)
         
         result = await run_modeller_checker_workflow(
             problem=problem,
@@ -93,7 +96,7 @@ async def main_stdio(config_path: str = None):
             checker_llm=_checker_llm,
             validate_tool=_validate_tool,
             solve_tool=async_solve_tool,
-            max_iterations=max_iterations,
+            max_iterations=iterations,
             verbose=verbose,
         )
         
@@ -134,18 +137,21 @@ async def main_http(port: int = 8767, config_path: str = None):
     async_solve_tool = SyncToolWrapper(_solve_tool)
     
     @mcp_app.tool()
-    async def modeller_checker_workflow(problem: str, max_iterations: int = 5) -> str:
+    async def modeller_checker_workflow(problem: str, max_iterations: int = None) -> str:
         """
         Dual-agent workflow for optimization problem modeling.
         
         Args:
             problem: Natural language problem description
-            max_iterations: Max refinement iterations
+            max_iterations: Max refinement iterations (default from config)
         
         Returns:
             Solution with MiniZinc model and optimal values
         """
-        verbose = _config.get("workflow", {}).get("verbose", False)
+        workflow_config = _config.get("workflow", {})
+        verbose = workflow_config.get("verbose", False)
+        # Use provided max_iterations or fall back to config value or default to 5
+        iterations = max_iterations if max_iterations is not None else workflow_config.get("max_iterations", 5)
         
         result = await run_modeller_checker_workflow(
             problem=problem,
@@ -153,7 +159,7 @@ async def main_http(port: int = 8767, config_path: str = None):
             checker_llm=_checker_llm,
             validate_tool=_validate_tool,
             solve_tool=async_solve_tool,
-            max_iterations=max_iterations,
+            max_iterations=iterations,
             verbose=verbose,
         )
         
