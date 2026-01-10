@@ -19,6 +19,7 @@ from langchain_core.messages import BaseMessage
 
 from modeller_checker.config import load_config, create_llms_from_config
 from modeller_checker.workflow import run_modeller_checker_workflow
+from mzn.solver import MiniZincSolver
 from langchain_optimise.minizinc_tools import (
     create_validate_minizinc_tool,
     create_solve_minizinc_tool,
@@ -42,7 +43,17 @@ def load_server_config(config_path: str = None):
         _config = load_config(config_path)
         _modeller_llm, _checker_llm = create_llms_from_config(config_path)
         _validate_tool = create_validate_minizinc_tool()
-        _solve_tool = create_solve_minizinc_tool()
+        
+        # Get solver backend from config (default to coinbc)
+        workflow_config = _config.get("workflow", {})
+        solver_backend = workflow_config.get("solver_backend", "coinbc")
+        # Map 'mzn' to 'coinbc' for backwards compatibility
+        if solver_backend == "mzn":
+            solver_backend = "coinbc"
+        
+        _solve_tool = create_solve_minizinc_tool(
+            solver_factory=lambda: MiniZincSolver(solver_backend=solver_backend)
+        )
     except Exception as e:
         print(f"ERROR: Failed to load configuration: {e}", file=sys.stderr)
         print(f"Config path: {config_path or 'default (repo_root/config.yaml)'}", file=sys.stderr)
@@ -115,11 +126,18 @@ Iterations: {result['iterations']}
     await mcp_app.run_stdio_async(show_banner=False)
 
 
-async def main_http(port: int = 8767, config_path: str = None):
+async def main_http(port: int = None, host: str = None, config_path: str = None):
     """Run MCP server with HTTP transport."""
     from fastmcp import FastMCP
     
     load_server_config(config_path)
+    
+    # Get HTTP settings from config if not provided via CLI
+    mcp_server_config = _config.get("mcp_server", {})
+    if port is None:
+        port = mcp_server_config.get("http_port", 8767)
+    if host is None:
+        host = mcp_server_config.get("http_host", "127.0.0.1")
     
     # Create FastMCP server
     mcp_app = FastMCP("modeller-checker")
@@ -177,7 +195,7 @@ Iterations: {result['iterations']}
     
     await mcp_app.run_http_async(
         transport="streamable-http",
-        host="127.0.0.1",
+        host=host,
         port=port,
         path="/mcp",
         show_banner=False,
@@ -207,10 +225,16 @@ def main():
         help="Use HTTP transport",
     )
     parser.add_argument(
+        "--http-host",
+        type=str,
+        default=None,
+        help="HTTP server host (default from config: 127.0.0.1)",
+    )
+    parser.add_argument(
         "--http-port",
         type=int,
-        default=8767,
-        help="HTTP server port (default: 8767)",
+        default=None,
+        help="HTTP server port (default from config: 8767)",
     )
     parser.add_argument(
         "--config",
@@ -257,7 +281,7 @@ def main():
         if args.stdio:
             asyncio.run(main_stdio(args.config))
         else:
-            asyncio.run(main_http(args.http_port, args.config))
+            asyncio.run(main_http(args.http_port, args.http_host, args.config))
     except Exception as e:
         print(f"FATAL ERROR: {e}", file=sys.stderr)
         import traceback

@@ -125,13 +125,20 @@ def create_modeller_checker_tool(
     config = load_config(config_path)
     modeller_llm, checker_llm = create_llms_from_config(config_path)
     
-    # Get max_iterations from config
+    # Get workflow config
     workflow_config = config.get("modeller_checker", {}).get("workflow", {})
     default_max_iterations = workflow_config.get("max_iterations", 5)
+    solver_backend = workflow_config.get("solver_backend", "coinbc")
+    # Map 'mzn' to 'coinbc' for backwards compatibility
+    if solver_backend == "mzn":
+        solver_backend = "coinbc"
     
     # Create validation and solver tools
+    from mzn.solver import MiniZincSolver
     validate_tool = create_validate_minizinc_tool()
-    solve_tool = create_solve_minizinc_tool()
+    solve_tool = create_solve_minizinc_tool(
+        solver_factory=lambda: MiniZincSolver(solver_backend=solver_backend)
+    )
     
     return ModellerCheckerTool(
         modeller_llm=modeller_llm,

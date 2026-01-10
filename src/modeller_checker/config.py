@@ -67,11 +67,12 @@ def create_llm_from_config(config: Dict[str, Any], defaults: Dict[str, Any] = No
     defaults = defaults or {}
     provider = config.get("provider", "ollama").lower()
     default_max_tokens = defaults.get("default_max_tokens", 2048)
+    default_temperature = defaults.get("default_temperature", 0.5)
     
     if provider == "ollama":
         return ChatOllama(
             model=config.get("model", "qwen3"),
-            temperature=config.get("temperature", 0.5),
+            temperature=config.get("temperature", default_temperature),
             base_url=config.get("base_url", "http://127.0.0.1:11434"),
         )
     
@@ -85,7 +86,7 @@ def create_llm_from_config(config: Dict[str, Any], defaults: Dict[str, Any] = No
         
         return ChatOpenAI(
             model=config.get("model", "gpt-4"),
-            temperature=config.get("temperature", 0.5),
+            temperature=config.get("temperature", default_temperature),
             api_key=config.get("api_key"),
             max_tokens=config.get("max_tokens"),
         )
@@ -100,7 +101,7 @@ def create_llm_from_config(config: Dict[str, Any], defaults: Dict[str, Any] = No
         
         return ChatAnthropic(
             model=config.get("model", "claude-3-sonnet-20240229"),
-            temperature=config.get("temperature", 0.5),
+            temperature=config.get("temperature", default_temperature),
             api_key=config.get("api_key"),
             max_tokens=config.get("max_tokens", default_max_tokens),
         )
@@ -115,7 +116,7 @@ def create_llm_from_config(config: Dict[str, Any], defaults: Dict[str, Any] = No
         
         return AzureChatOpenAI(
             model=config.get("model", "gpt-4"),
-            temperature=config.get("temperature", 0.5),
+            temperature=config.get("temperature", default_temperature),
             api_key=config.get("api_key"),
             azure_endpoint=config.get("azure_endpoint"),
             api_version=config.get("api_version", "2024-02-15-preview"),
