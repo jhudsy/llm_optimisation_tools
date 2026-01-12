@@ -131,30 +131,9 @@ def create_llm_from_config(config: Dict[str, Any], defaults: Dict[str, Any] = No
 
 def create_llms_from_config(
     config_path: Optional[str] = None
-) -> tuple[BaseChatModel, BaseChatModel]:
-    """
-    Create modeller and checker LLMs from config file.
-    
-    Args:
-        config_path: Path to config.yaml
-    
-    Returns:
-        (modeller_llm, checker_llm) tuple
-    """
-    config = load_config(config_path)
-    llm_defaults = config.get("llm_defaults", {})
-    
-    modeller_llm = create_llm_from_config(config["modeller"], defaults=llm_defaults)
-    checker_llm = create_llm_from_config(config["checker"], defaults=llm_defaults)
-    
-    return modeller_llm, checker_llm
-
-
-def create_complex_workflow_llms(
-    config_path: Optional[str] = None
 ) -> tuple[BaseChatModel, BaseChatModel, BaseChatModel, BaseChatModel, BaseChatModel]:
     """
-    Create all 5 LLMs for complex workflow from config file.
+    Create all 5 LLMs for workflow from config file.
     
     Args:
         config_path: Path to config.yaml
@@ -166,28 +145,40 @@ def create_complex_workflow_llms(
     config = load_config(config_path)
     llm_defaults = config.get("llm_defaults", {})
     
-    # Create LLMs for each agent, falling back to modeller/checker if not specified
+    # Create LLMs for each agent, with sensible defaults
     formulator_llm = create_llm_from_config(
-        config.get("formulator", config.get("modeller")), 
+        config.get("formulator", config.get("modeller", {})), 
         defaults=llm_defaults
     )
     equation_checker_llm = create_llm_from_config(
-        config.get("equation_checker", config.get("checker")), 
+        config.get("equation_checker", config.get("checker", {})), 
         defaults=llm_defaults
     )
     translator_llm = create_llm_from_config(
-        config.get("translator", config.get("modeller")), 
+        config.get("translator", config.get("modeller", {})), 
         defaults=llm_defaults
     )
     code_checker_llm = create_llm_from_config(
-        config.get("code_checker", config.get("checker")), 
+        config.get("code_checker", config.get("checker", {})), 
         defaults=llm_defaults
     )
     solver_executor_llm = create_llm_from_config(
-        config.get("solver_executor", config.get("checker")), 
+        config.get("solver_executor", config.get("checker", {})), 
         defaults=llm_defaults
     )
     
     return (formulator_llm, equation_checker_llm, translator_llm, 
             code_checker_llm, solver_executor_llm)
+
+
+# Legacy compatibility - kept for backwards compatibility with old configs
+def create_complex_workflow_llms(
+    config_path: Optional[str] = None
+) -> tuple[BaseChatModel, BaseChatModel, BaseChatModel, BaseChatModel, BaseChatModel]:
+    """
+    Deprecated: Use create_llms_from_config() instead.
+    
+    Kept for backwards compatibility.
+    """
+    return create_llms_from_config(config_path)
 

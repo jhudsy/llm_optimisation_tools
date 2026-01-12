@@ -1,7 +1,7 @@
 """
-LangChain tool for complex 5-agent workflow.
+LangChain tool for optimization workflow.
 
-Provides a LangChain tool that wraps the complex workflow for direct use
+Provides a LangChain tool that wraps the workflow for direct use
 in LangChain agents without MCP overhead.
 """
 
@@ -17,16 +17,16 @@ from pydantic import BaseModel, Field
 repo_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo_root / "src"))
 
-from modeller_checker.config import load_config, create_complex_workflow_llms
-from modeller_checker.complex_workflow import run_complex_workflow, format_formulation_for_display
+from modeller_checker.config import load_config, create_llms_from_config
+from modeller_checker.workflow import run_workflow, format_formulation_for_display
 from langchain_optimise.minizinc_tools import (
     create_validate_minizinc_tool,
     create_solve_minizinc_tool,
 )
 
 
-class ComplexWorkflowInput(BaseModel):
-    """Input schema for complex workflow tool."""
+class WorkflowInput(BaseModel):
+    """Input schema for workflow tool."""
     
     problem: str = Field(
         description=(
@@ -41,12 +41,12 @@ class ComplexWorkflowInput(BaseModel):
     )
 
 
-class ComplexWorkflowTool(BaseTool):
-    """LangChain tool for complex 5-agent workflow."""
+class OptimizationWorkflowTool(BaseTool):
+    """LangChain tool for optimization workflow."""
     
-    name: str = "complex_optimization_workflow"
+    name: str = "optimization_workflow"
     description: str = (
-        "Complex 5-agent workflow for optimization problem modeling. "
+        "Multi-agent workflow for optimization problem modeling. "
         "Uses specialized agents: "
         "1) Formulator creates mathematical equations from problem description, "
         "2) Equation Checker validates equations match the problem, "
@@ -54,9 +54,9 @@ class ComplexWorkflowTool(BaseTool):
         "4) Code Checker validates MiniZinc implementation, "
         "5) Solver Executor runs solver and diagnoses errors, routing feedback appropriately. "
         "Returns optimal solution with complete formulation and code. "
-        "Use for complex optimization requiring validated mathematical formulation."
+        "Use for optimization problems requiring validated mathematical formulation."
     )
-    args_schema: type[BaseModel] = ComplexWorkflowInput
+    args_schema: type[BaseModel] = WorkflowInput
     
     formulator_llm: Optional[object] = None
     equation_checker_llm: Optional[object] = None
@@ -80,7 +80,7 @@ class ComplexWorkflowTool(BaseTool):
         # Use provided max_iterations or fall back to default from config
         iterations = max_iterations if max_iterations is not None else self.default_max_iterations
         
-        result = await run_complex_workflow(
+        result = await run_workflow(
             problem=problem,
             formulator_llm=self.formulator_llm,
             equation_checker_llm=self.equation_checker_llm,
@@ -93,7 +93,7 @@ class ComplexWorkflowTool(BaseTool):
             verbose=self.verbose,
         )
         
-        response = f"""Complex Workflow Results:
+        response = f"""Workflow Results:
 
 Success: {result['success']}
 Iterations: {result['iterations']}
@@ -118,23 +118,23 @@ Final Response:
         return response
 
 
-def create_complex_workflow_tool(
+def create_optimization_workflow_tool(
     config_path: Optional[str] = None,
     verbose: bool = False,
-) -> ComplexWorkflowTool:
+) -> OptimizationWorkflowTool:
     """
-    Create a LangChain tool for the complex 5-agent workflow.
+    Create a LangChain tool for the optimization workflow.
     
     Args:
         config_path: Path to config.yaml. If None, uses default location.
         verbose: Print detailed workflow steps
     
     Returns:
-        Configured ComplexWorkflowTool instance
+        Configured OptimizationWorkflowTool instance
     
     Example:
-        >>> from langchain_optimise.complex_workflow_tool import create_complex_workflow_tool
-        >>> tool = create_complex_workflow_tool(verbose=True)
+        >>> from langchain_optimise.workflow_tool import create_optimization_workflow_tool
+        >>> tool = create_optimization_workflow_tool(verbose=True)
         >>> result = tool.invoke({
         ...     "problem": "We have 110 acres of land. We can plant wheat or corn...",
         ...     "max_iterations": 10
@@ -143,7 +143,7 @@ def create_complex_workflow_tool(
     # Load config and create LLMs
     config = load_config(config_path)
     (formulator_llm, equation_checker_llm, translator_llm, 
-     code_checker_llm, solver_executor_llm) = create_complex_workflow_llms(config_path)
+     code_checker_llm, solver_executor_llm) = create_llms_from_config(config_path)
     
     # Get workflow config
     workflow_config = config.get("workflow", {})
@@ -160,7 +160,7 @@ def create_complex_workflow_tool(
         solver_factory=lambda: MiniZincSolver(solver_backend=solver_backend)
     )
     
-    return ComplexWorkflowTool(
+    return OptimizationWorkflowTool(
         formulator_llm=formulator_llm,
         equation_checker_llm=equation_checker_llm,
         translator_llm=translator_llm,

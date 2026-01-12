@@ -1,7 +1,7 @@
 """
-Test script for the complex 5-agent workflow.
+Test script for the optimization workflow.
 
-Run: python scripts/complex_workflow_test.py
+Run: python scripts/workflow_test.py
 """
 
 import asyncio
@@ -12,8 +12,8 @@ from pathlib import Path
 repo_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(repo_root / "src"))
 
-from modeller_checker.config import load_config, create_complex_workflow_llms
-from modeller_checker.complex_workflow import run_complex_workflow
+from modeller_checker.config import load_config, create_llms_from_config
+from modeller_checker.workflow import run_workflow, format_formulation_for_display
 from langchain_optimise.minizinc_tools import (
     create_validate_minizinc_tool,
     create_solve_minizinc_tool,
@@ -24,7 +24,7 @@ from mzn.solver import MiniZincSolver
 async def main():
     """CLI entry point."""
     parser = argparse.ArgumentParser(
-        description="Test complex 5-agent workflow"
+        description="Test optimization workflow"
     )
     parser.add_argument(
         "-p",
@@ -66,9 +66,9 @@ async def main():
     max_iterations = args.iterations if args.iterations is not None else workflow_config.get("max_iterations", 10)
     
     # Create LLMs for all 5 agents
-    print("Loading LLMs for 5-agent workflow...")
+    print("Loading LLMs for workflow...")
     (formulator_llm, equation_checker_llm, translator_llm, 
-     code_checker_llm, solver_executor_llm) = create_complex_workflow_llms(args.config)
+     code_checker_llm, solver_executor_llm) = create_llms_from_config(args.config)
     
     # Create tools
     print("Initializing tools...")
@@ -95,11 +95,11 @@ async def main():
     async_solve_tool = SyncToolWrapper(solve_tool)
     
     print("\n" + "=" * 80)
-    print("Starting complex 5-agent workflow...")
+    print("Starting optimization workflow...")
     print("=" * 80)
     
     # Run workflow
-    results = await run_complex_workflow(
+    results = await run_workflow(
         problem=args.problem,
         formulator_llm=formulator_llm,
         equation_checker_llm=equation_checker_llm,
@@ -121,7 +121,6 @@ async def main():
     print(f"\nFinal Response:\n{results['final_response']}")
     
     if results.get('formulation'):
-        from modeller_checker.complex_workflow import format_formulation_for_display
         print(f"\n{'='*80}")
         print("MATHEMATICAL FORMULATION")
         print("=" * 80)

@@ -46,29 +46,10 @@ mzn:
     max_parallel_solvers: 5  # Max concurrent solver instances for LangChain tools
 
 # =============================================================================
-# Modeller-Checker Workflow Configuration
+# Optimization Workflow Configuration
 # =============================================================================
 modeller_checker:
-  # Simple 2-agent workflow (legacy)
-  # Modeller LLM Configuration
-  modeller:
-    provider: "ollama"  # Options: ollama, openai, anthropic, azure
-    model: "qwen3"
-    base_url: "http://127.0.0.1:11434"  # For Ollama
-    temperature: 0.5
-    # api_key: "${OPENAI_API_KEY}"  # For cloud providers (use env var)
-    # max_tokens: 2000
-  
-  # Checker LLM Configuration
-  checker:
-    provider: "ollama"
-    model: "qwen3"  # Can be different from modeller
-    base_url: "http://127.0.0.1:11434"
-    temperature: 0.3
-    # api_key: "${ANTHROPIC_API_KEY}"
-    # max_tokens: 1500
-  
-  # Complex 5-agent workflow
+  # Agent LLM Configuration
   # Each agent can use a different LLM configuration
   formulator:
     provider: "ollama"
@@ -102,7 +83,6 @@ modeller_checker:
   
   # Workflow Settings
   workflow:
-    mode: "simple"  # Options: simple (2-agent), complex (5-agent)
     max_iterations: 10
     verbose: false
     solver_backend: "mzn"  # Options: mzn, mathprog (future)
