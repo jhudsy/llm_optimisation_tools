@@ -1,5 +1,13 @@
-"""LangChain tools for LP/MILP optimization using HiGHS."""
+"""LangChain tools for optimization workflows."""
 
-from .tools import create_validate_lp_tool, create_solve_lp_tool
+from .minizinc_tools import (
+	create_validate_minizinc_tool,
+	create_solve_minizinc_tool,
+)
+from .workflow_tool import create_optimization_workflow_tool
 
-__all__ = ["create_validate_lp_tool", "create_solve_lp_tool"]
+__all__ = [
+	"create_validate_minizinc_tool",
+	"create_solve_minizinc_tool",
+	"create_optimization_workflow_tool",
+]
