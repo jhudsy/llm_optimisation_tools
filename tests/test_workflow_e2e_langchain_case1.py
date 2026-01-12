@@ -83,6 +83,10 @@ def test_e2e_langchain_case1_real_models():
         validate_tool = create_validate_minizinc_tool()
         solve_async_callable = await create_solve_minizinc_tool_async()
         solve_tool = AsyncFuncWrapper(solve_async_callable)
+        
+        # Read max_iterations from config
+        config = load_config(None)
+        max_iterations = config.get("modeller_checker", {}).get("workflow", {}).get("max_iterations", 10)
 
         # Problem statement (explicitly require integer batches for a known optimum)
         problem = (
@@ -105,7 +109,7 @@ def test_e2e_langchain_case1_real_models():
                 solver_executor_llm=solver_executor_llm,
                 validate_tool=validate_tool,
                 solve_tool=solve_tool,
-                max_iterations=10,
+                max_iterations=max_iterations,
                 verbose=True,  # Enable verbose output to see LLM messages
             )
         except Exception as exc:
@@ -222,8 +226,10 @@ def test_e2e_langchain_case2_multi_product_lot_sizing():
         validate_tool = create_validate_minizinc_tool()
         solve_async_callable = await create_solve_minizinc_tool_async()
         solve_tool = AsyncFuncWrapper(solve_async_callable)
-
-        # Complex multi-product, multi-period lot-sizing problem
+        
+        # Read max_iterations from config
+        config = load_config(None)
+        max_iterations = config.get("modeller_checker", {}).get("workflow", {}).get("max_iterations", 10)
         problem = """
         A company produces 5 different products over a planning horizon of 6 periods.
         Customer demand is deterministic and must be met on time; backlogging is not allowed, 
@@ -285,7 +291,7 @@ def test_e2e_langchain_case2_multi_product_lot_sizing():
                 solver_executor_llm=solver_executor_llm,
                 validate_tool=validate_tool,
                 solve_tool=solve_tool,
-                max_iterations=10,
+                max_iterations=max_iterations,
                 verbose=True,
             )
         except Exception as exc:
