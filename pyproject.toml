@@ -5,20 +5,19 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "optimise-mcp"
 version = "0.1.0"
-description = "Model Context Protocol server that helps LLMs emit and solve LP/MILP models via HiGHS."
+description = "MCP server for AI-powered optimization using a 5-agent workflow and MiniZinc solver."
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
   { name = "optimise-mcp maintainers" }
 ]
-keywords = ["mcp", "optimization", "ollama", "lp", "milp"]
+keywords = ["mcp", "optimization", "ollama", "minizinc", "constraint-programming"]
 license = { text = "MIT" }
 dependencies = [
   "langchain-mcp-adapters>=0.1.0",
   "langchain-ollama>=0.1.0",
   "langchain>=0.3.0",
   "fastmcp>=2.14.0",
-  "highspy>=1.7",
   "pydantic>=2.8",
   "pyyaml>=6.0"
 ]
@@ -30,7 +29,7 @@ dev = [
 ]
 
 [project.scripts]
-optimise-mcp = "optimise_mcp.server:run"
+optimization-workflow = "modeller_checker.mcp:main_stdio"
 
 [tool.setuptools.packages.find]
 where = ["src"]

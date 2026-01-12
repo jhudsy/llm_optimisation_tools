@@ -1,49 +1,5 @@
 # Optimise-MCP Configuration File
-# This file configures all components: LP solver, MiniZinc solver, and Modeller-Checker workflow
-
-# =============================================================================
-# LP/MILP Solver Configuration
-# =============================================================================
-mathprog:
-  solver:
-    backend: "highs"  # Options: highs (only option currently supported)
-    time_limit: 60    # seconds
-  
-  mcp_server:
-    stdio_enabled: true
-    http_enabled: true
-    http_host: "127.0.0.1"
-    http_port: 8765
-    log_level: "INFO"  # DEBUG, INFO, WARNING, ERROR
-  
-  validation:
-    max_variables: 10000
-    max_constraints: 10000
-  
-  performance:
-    max_parallel_solvers: 5  # Max concurrent solver instances for LangChain tools
-
-# =============================================================================
-# MiniZinc Solver Configuration
-# =============================================================================
-mzn:
-  solver:
-    backend: "coinbc"  # Options: coinbc, gecode, chuffed, or-tools, etc.
-    use_python_bindings: true  # If false, falls back to CLI
-    time_limit: 60  # seconds
-  
-  mcp_server:
-    stdio_enabled: true
-    http_enabled: true
-    http_host: "127.0.0.1"
-    http_port: 8766
-    log_level: "INFO"
-  
-  validation:
-    strict_mode: false  # Stricter validation rules
-  
-  performance:
-    max_parallel_solvers: 5  # Max concurrent solver instances for LangChain tools
+# Configuration for the 5-agent optimization workflow
 
 # =============================================================================
 # Optimization Workflow Configuration
@@ -85,7 +41,6 @@ modeller_checker:
   workflow:
     max_iterations: 10
     verbose: false
-    solver_backend: "mzn"  # Options: mzn, mathprog (future)
   
   # MCP Server Settings
   mcp_server:
@@ -95,9 +50,21 @@ modeller_checker:
     http_port: 8767
     log_level: "INFO"
   
-  # LLM Defaults (used when not specified in modeller/checker)
+  # LLM Defaults
   llm_defaults:
     default_max_tokens: 2048
+
+# =============================================================================
+# MiniZinc Solver Configuration (used by workflow)
+# =============================================================================
+mzn:
+  solver:
+    backend: "coinbc"  # Options: coinbc, gecode, chuffed, or-tools, etc.
+    use_python_bindings: true  # If false, falls back to CLI
+    time_limit: 60  # seconds
+  
+  validation:
+    strict_mode: false  # Stricter validation rules
     default_temperature: 0.5
 
 # =============================================================================
@@ -111,10 +78,11 @@ global:
 # =============================================================================
 # Example Cloud Provider Configurations
 # =============================================================================
+# You can mix different providers for different agents
 
 # OpenAI Configuration Example:
 # modeller_checker:
-#   modeller:
+#   formulator:
 #     provider: "openai"
 #     model: "gpt-4"
 #     api_key: "${OPENAI_API_KEY}"
@@ -123,7 +91,7 @@ global:
 
 # Anthropic Configuration Example:
 # modeller_checker:
-#   checker:
+#   equation_checker:
 #     provider: "anthropic"
 #     model: "claude-3-sonnet-20240229"
 #     api_key: "${ANTHROPIC_API_KEY}"
@@ -132,13 +100,13 @@ global:
 
 # Azure OpenAI Configuration Example:
 # modeller_checker:
-#   modeller:
+#   translator:
 #     provider: "azure"
 #     model: "gpt-4"
 #     api_key: "${AZURE_OPENAI_API_KEY}"
 #     azure_endpoint: "https://your-resource.openai.azure.com/"
 #     api_version: "2024-02-15-preview"
-#     temperature: 0.5
+#     temperature: 0.4
 
 # =============================================================================
 # MiniZinc Solver Backend Options
@@ -149,4 +117,3 @@ global:
 # - chuffed: Lazy clause generation solver
 # - or-tools: Google OR-Tools
 # To see available solvers: minizinc --solvers
-

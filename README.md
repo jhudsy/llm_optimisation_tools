@@ -1,35 +1,31 @@
 # optimise-mcp
 
-Production-ready Model Context Protocol (MCP) server suite for optimization problems. Provides LP/MILP solving (HiGHS), constraint programming (MiniZinc), and a dual-agent AI workflow for problem modeling.
+AI-powered optimization problem solver using a 5-agent workflow. Automatically converts natural language problem descriptions into MiniZinc code and solves them.
 
 ## Features
 
-### 🎯 Three Core Functionalities
+### 🎯 5-Agent Optimization Workflow
 
-#### 1. **LP/MILP Solver** (`src/mathprog/`)
-- **HiGHS solver backend** for linear and mixed-integer programs
-- **Direct file support** - accepts `.lp` files
-- **Validator-first design** catches issues early
-- **Quadratic objectives** supported
-- **MCP integration** via stdio or HTTP
+Transform optimization problems from natural language to solutions:
 
-#### 2. **MiniZinc Solver** (`src/mzn/`)
-- **Constraint programming** for complex optimization
-- **Direct file support** - accepts `.mzn` files  
-- **Multiple solvers** - coinbc, gecode, chuffed, or-tools
-- **Python + CLI** - bindings with fallback
-- **MCP integration** via stdio or HTTP
+**Problem** → **Formulator** → **Equation Checker** → **Translator** → **Code Checker** → **Solver Executor** → **Solution**
 
-#### 3. **Optimization Workflow** (`src/modeller_checker/`)
-- **5-agent specialized workflow:**
-  - **Formulator** → Equation Checker → **Translator** → Code Checker → **Solver Executor**
-- **Automatic model generation** from problem descriptions
-- **Intelligent error routing** based on error classification
-- **Validation & refinement** at each stage ensures correctness
-- **Multi-provider support** - mix local (Ollama) and cloud (OpenAI, Anthropic, Azure) LLMs
-- **Three integration paths** - MCP server, LangChain tool, CLI
+#### The 5 Specialized Agents:
 
-See [docs/WORKFLOW.md](docs/WORKFLOW.md) for detailed workflow documentation.
+1. **Formulator**: Converts natural language into mathematical equations
+2. **Equation Checker**: Validates mathematical correctness and completeness
+3. **Translator**: Converts equations into MiniZinc constraint programming code
+4. **Code Checker**: Validates MiniZinc syntax and semantics
+5. **Solver Executor**: Runs the solver and diagnoses errors
+
+**Key Capabilities:**
+- **Intelligent error routing** - Errors automatically routed to the right agent
+- **Multi-stage validation** - Two validation checkpoints ensure correctness
+- **Explicit formulation** - Mathematical representation before code generation
+- **Multi-provider support** - Mix local (Ollama) and cloud (OpenAI, Anthropic, Azure) LLMs
+- **Three integration paths** - MCP server, LangChain tool, or CLI
+
+See [docs/WORKFLOW.md](docs/WORKFLOW.md) for detailed documentation.
 
 ## Quick Start
 
@@ -38,28 +34,16 @@ See [docs/WORKFLOW.md](docs/WORKFLOW.md) for detailed workflow documentation.
 pip install -e .
 ```
 
+### Prerequisites
+- Python 3.11+
+- MiniZinc (install from https://www.minizinc.org/software.html)
+- Ollama (for local LLMs) or API keys for cloud providers
+
 ### Configuration
 
-Create `config.yaml` (or edit the provided template):
+Create `config.yaml`:
 
 ```yaml
-# LP/MILP Solver (Mathematical Programming)
-mathprog:
-  solver:
-    backend: "highs"
-    time_limit: 60
-  mcp_server:
-    http_port: 8765
-
-# MiniZinc Constraint Programming Solver
-mzn:
-  solver:
-    backend: "coinbc"
-    time_limit: 60
-  mcp_server:
-    http_port: 8766
-
-# Modeller-Checker (Optimization Workflow)
 modeller_checker:
   # 5-agent workflow - each agent configurable
   formulator:
@@ -87,141 +71,108 @@ modeller_checker:
     max_iterations: 10
   mcp_server:
     http_port: 8767
+
+# MiniZinc solver backend (used by workflow)
+mzn:
+  solver:
+    backend: "coinbc"  # or gecode, chuffed, or-tools
+    time_limit: 60
 ```
 
 ### Usage Examples
 
-#### LP/MILP Solver
+#### CLI Test
 ```bash
-# Start MCP server
-python -m src.mathprog.mcp --stdio          # stdio transport
-python -m src.mathprog.mcp --http           # HTTP on port 8765
-
-# Test with LangChain tools
-python -c "
-from langchain_optimise.lp_tools import create_validate_lp_tool, create_solve_lp_tool
-validate = create_validate_lp_tool()
-solve = create_solve_lp_tool()
-
-lp_code = '''
-Maximize
- obj: x + 2 y
-Subject To
- c1: x + y <= 10
-Bounds
- 0 <= x <= 10
- 0 <= y <= 10
-End
-'''
-
-result = solve.invoke({'lp_code': lp_code})
-print(result)
-"
+python scripts/workflow_test.py -v -p "Allocate 100 hours between product A (profit \$50/unit, 2 hours each) and product B (profit \$30/unit, 1 hour each) to maximize profit"
 ```
 
-#### MiniZinc Solver
-```bash
-# Start MCP server
-python -m src.mzn.mcp --stdio    # stdio transport
-python -m src.mzn.mcp --http     # HTTP on port 8766
-
-# Run example
-python examples/minizinc_example.py
-
-# Test with .mzn file
-python -c "
-from langchain_optimise.minizinc_tools import create_solve_minizinc_tool
-solve = create_solve_minizinc_tool()
-
-with open('examples/test.mzn') as f:
-    mzn_code = f.read()
-
-result = solve.invoke({'mzn_code': mzn_code})
-print(result)
-"
-```
-
-#### Optimization Workflow
-```bash
-# Start MCP server
-python -m src.modeller_checker.mcp --stdio    # stdio
-python -m src.modeller_checker.mcp --http     # HTTP on port 8767
-
-# CLI test
-python scripts/workflow_test.py -v \
-  -p "We have 110 acres. Plant wheat or corn to maximize profit..."
-
-# LangChain tool
+#### LangChain Tool
+```python
 from langchain_optimise.workflow_tool import create_optimization_workflow_tool
-tool = create_optimization_workflow_tool(verbose=True)
-result = tool.invoke({
-    "problem": "Maximize x+y subject to x+y<=100, x>=0, y>=0",
-    "max_iterations": 10
-})
+
+# Create the tool
+workflow_tool = create_optimization_workflow_tool()
+
+# Use with an agent
+problem = """
+A factory produces two products A and B. 
+Product A gives $50 profit and takes 2 hours.
+Product B gives $30 profit and takes 1 hour.
+We have 100 hours available. How many of each should we make?
+"""
+
+result = workflow_tool.invoke({"problem": problem})
+print(result)
+```
+
+#### MCP Server
+```bash
+# Start MCP server
+python -m src.modeller_checker.mcp --stdio    # stdio transport
+python -m src.modeller_checker.mcp --http     # HTTP on port 8767
 ```
 
 ## Project Structure
 
 ```
-optimise_mcp/
-├── config.yaml                 # Unified configuration
-├── README.md                   # This file
-│
-├── src/                        # Source code
-│   ├── mathprog/              # LP/MILP solver (CPLEX .lp format)
-│   │   ├── mcp.py            # MCP server
-│   │   ├── solver.py         # HiGHS solver
-│   │   └── validator.py      # LP validation
-│   ├── mzn/                   # MiniZinc solver
-│   │   ├── mcp.py            # MCP server
-│   │   ├── solver.py         # MiniZinc solver
-│   │   └── validator.py      # MiniZinc validation
-│   ├── modeller_checker/      # Dual-agent workflow
-│   │   ├── workflow.py       # Core logic
-│   │   ├── config.py         # Config loader
-│   │   └── mcp.py            # MCP server
-│   └── langchain_optimise/    # LangChain tools
-│       ├── lp_tools.py
-│       ├── minizinc_tools.py
-│       └── modeller_checker_tool.py
-│
-├── scripts/                    # CLI scripts
-│   ├── mcp_lp_roundtrip.py
-│   ├── langchain_minizinc_roundtrip.py
-│   └── langchain_modeller_checker.py
-│
-├── examples/                   # Usage examples
-│   ├── lp_example.py
-│   ├── minizinc_example.py
-│   └── modeller_checker_example.py
-│
-├── tests/                      # Test suite
-│   ├── test_lp_tools.py
-│   ├── test_minizinc_tools.py
-│   └── ...
-│
-└── docs/                       # Documentation
-    ├── DEVELOPMENT.md          # Development guide
-    ├── TESTING.md              # Testing guide
-    ├── MODELLER_CHECKER.md     # Workflow details
-    └── INTEGRATION_GUIDE.md    # Integration options
+optimise-mcp/
+├── src/
+│   ├── modeller_checker/      # 5-agent workflow
+│   │   ├── workflow.py         # Main workflow orchestration
+│   │   ├── config.py           # Configuration loading
+│   │   └── mcp.py              # MCP server
+│   ├── langchain_optimise/     # LangChain tools
+│   │   ├── workflow_tool.py    # Workflow tool wrapper
+│   │   └── minizinc_tools.py   # MiniZinc tools (used by workflow)
+│   └── mzn/                    # MiniZinc solver utilities
+│       ├── solver.py
+│       └── validator.py
+├── scripts/
+│   └── workflow_test.py        # CLI test script
+├── tests/
+│   └── test_minizinc_solver.py
+├── docs/
+│   ├── WORKFLOW.md             # Main workflow documentation
+│   ├── QUICK_REFERENCE.md      # Quick reference
+│   ├── MIGRATION_GUIDE.md      # Migration from older versions
+│   ├── CONFIGURATION.md        # Configuration details
+│   ├── INTEGRATION_GUIDE.md    # Integration options
+│   └── TESTING.md              # Testing guide
+└── config.yaml                 # Configuration file
 ```
 
 ## Configuration Guide
 
-All three components are configured via `config.yaml`:
+The system is configured via `config.yaml`:
 
-### LP/MILP Solver Configuration
+### Workflow Configuration
 ```yaml
-mathprog:
-  solver:
-    backend: "highs"           # Solver backend
-    time_limit: 60            # Seconds
+modeller_checker:
+  # Configure each of the 5 agents independently
+  formulator:
+    provider: "ollama"        # ollama, openai, anthropic, azure
+    model: "qwen3"
+    temperature: 0.5
+  equation_checker:
+    provider: "ollama"
+    model: "qwen3"
+    temperature: 0.3
+  translator:
+    provider: "ollama"
+    model: "qwen3"
+    temperature: 0.4
+  code_checker:
+    provider: "ollama"
+    model: "qwen3"
+    temperature: 0.2
+  solver_executor:
+    provider: "ollama"
+    model: "qwen3"
+    temperature: 0.3
+  workflow:
+    max_iterations: 10
   mcp_server:
-    stdio_enabled: true
-    http_enabled: true
-    http_port: 8765           # HTTP server port
-    log_level: "INFO"
+    http_port: 8767
 ```
 
 ### MiniZinc Configuration
@@ -231,27 +182,6 @@ mzn:
     backend: "coinbc"         # coinbc, gecode, chuffed, or-tools
     use_python_bindings: true # false = CLI fallback
     time_limit: 60
-  mcp_server:
-    http_port: 8766
-```
-
-### Modeller-Checker Configuration
-```yaml
-modeller_checker:
-  modeller:
-    provider: "ollama"        # ollama, openai, anthropic, azure
-    model: "qwen3"
-    base_url: "http://127.0.0.1:11434"
-    temperature: 0.5
-  checker:
-    provider: "ollama"        # Can differ from modeller
-    model: "qwen3"
-    temperature: 0.3
-  workflow:
-    max_iterations: 5
-    solver_backend: "mzn"  # Use MiniZinc solver
-  mcp_server:
-    http_port: 8767
 ```
 
 **Cloud Provider Support:**
@@ -259,7 +189,7 @@ modeller_checker:
 - Anthropic: Requires `pip install langchain-anthropic`
 - Azure: Requires `pip install langchain-openai`
 
-See `config.yaml` for detailed examples.
+See [config.yaml](config.yaml) for detailed examples.
 
 ## MCP Integration
 
@@ -270,17 +200,7 @@ Add to MCP client configuration:
 ```json
 {
   "mcpServers": {
-    "lp-solver": {
-      "command": "python",
-      "args": ["-m", "src.mathprog.mcp", "--stdio"],
-      "cwd": "/path/to/optimise_mcp"
-    },
-    "minizinc-solver": {
-      "command": "python",
-      "args": ["-m", "src.mzn.mcp", "--stdio"],
-      "cwd": "/path/to/optimise_mcp"
-    },
-    "modeller-checker": {
+    "optimization-workflow": {
       "command": "python",
       "args": ["-m", "src.modeller_checker.mcp", "--stdio"],
       "cwd": "/path/to/optimise_mcp"
@@ -292,51 +212,44 @@ Add to MCP client configuration:
 ### HTTP Transport
 
 ```bash
-# Start all servers
-python -m src.mathprog.mcp --http --http-port 8765 &
-python -m src.mzn.mcp --http --http-port 8766 &
-python -m src.modeller_checker.mcp --http --http-port 8767 &
+# Start server
+python -m src.modeller_checker.mcp --http --http-port 8767
 ```
 
-**Note:** HTTP servers expose the MCP endpoint at `/mcp`. Connect to:
-- LP/MILP: `http://127.0.0.1:8765/mcp`
-- MiniZinc: `http://127.0.0.1:8766/mcp`
-- Modeller-Checker: `http://127.0.0.1:8767/mcp`
+**Note:** HTTP server exposes the MCP endpoint at `/mcp`. Connect to: `http://127.0.0.1:8767/mcp`
 
 ## Testing
 
 ```bash
-# Run full test suite
-pytest tests/ -v
+# Run tests
+pytest tests/test_minizinc_solver.py -v
 
-# Test specific components
-pytest tests/test_lp_tools.py -v
-pytest tests/test_minizinc_tools.py -v
-
-# Test roundtrip workflows
-python scripts/mcp_lp_roundtrip.py
-python scripts/langchain_minizinc_roundtrip.py
-python scripts/langchain_modeller_checker.py -v
+# Test workflow
+python scripts/workflow_test.py -v -p "Your optimization problem"
 ```
 
 ## Documentation
 
-- **[docs/INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md)** - Complete integration guide
-- **[docs/CONFIGURATION.md](docs/CONFIGURATION.md)** - Configuration reference
-- **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** - Development guide  
-- **[docs/TESTING.md](docs/TESTING.md)** - Testing guide
-- **[docs/MODELLER_CHECKER.md](docs/MODELLER_CHECKER.md)** - Workflow details
-- **[docs/example-prompts.md](docs/example-prompts.md)** - System prompts
+- [WORKFLOW.md](docs/WORKFLOW.md) - Complete workflow guide
+- [QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md) - Quick reference
+- [MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md) - Migrating from older versions
+- [CONFIGURATION.md](docs/CONFIGURATION.md) - Configuration details
+- [INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md) - Integration patterns
+- [TESTING.md](docs/TESTING.md) - Testing guide
 
-## Key Differences Between Components
+## Requirements
 
-| Feature | LP Solver | MiniZinc Solver | Modeller-Checker |
-|---------|-----------|-----------------|------------------|
-| **Input** | `.lp` file or LP code | `.mzn` file or MiniZinc code | Natural language |
-| **Solver** | HiGHS | Configurable (coinbc, gecode, etc.) | Uses MiniZinc internally |
-| **Best For** | Linear/MILP problems | Constraint programming | Complex problems needing validation |
-| **AI** | No | No | Yes (dual-agent) |
-| **Validation** | Syntax + structure | Syntax + semantics | Problem → Model verification |
+Core dependencies:
+- `langchain>=0.3.0`
+- `langchain-ollama>=0.1.0`
+- `fastmcp>=2.14.0`
+- `pydantic>=2.8`
+- `pyyaml>=6.0`
+- MiniZinc (external install required)
+
+Optional dependencies:
+- `langchain-openai` - For OpenAI/Azure
+- `langchain-anthropic` - For Anthropic/Claude
 
 ## License
 
@@ -344,4 +257,4 @@ MIT
 
 ## Contributing
 
-See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for development setup and guidelines.
+Contributions welcome! Please see [DEVELOPMENT.md](docs/DEVELOPMENT.md) for guidelines.
