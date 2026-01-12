@@ -279,7 +279,7 @@ async def run_complex_workflow(
             
             results["workflow_trace"].append(f"Iter{iteration+1}:Formulator")
             
-            formulator_messages = [SystemMessage(content=FORMULATOR_SYSTEM_PROMPT)]
+            formulator_messages: list[BaseMessage] = [SystemMessage(content=FORMULATOR_SYSTEM_PROMPT)]
             
             if state.last_feedback:
                 formulator_messages.append(HumanMessage(
@@ -367,7 +367,7 @@ async def run_complex_workflow(
             
             results["workflow_trace"].append(f"Iter{iteration+1}:Translator")
             
-            translator_messages = [SystemMessage(content=TRANSLATOR_SYSTEM_PROMPT)]
+            translator_messages: list[BaseMessage] = [SystemMessage(content=TRANSLATOR_SYSTEM_PROMPT)]
             
             if state.last_feedback:
                 translator_messages.append(HumanMessage(

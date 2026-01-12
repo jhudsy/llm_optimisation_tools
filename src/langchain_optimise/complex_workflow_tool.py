@@ -35,7 +35,7 @@ class ComplexWorkflowInput(BaseModel):
             "and any resource limits or requirements."
         )
     )
-    max_iterations: int = Field(
+    max_iterations: Optional[int] = Field(
         default=None,
         description="Maximum number of workflow iterations (uses config default if not specified)"
     )
@@ -71,11 +71,11 @@ class ComplexWorkflowTool(BaseTool):
     class Config:
         arbitrary_types_allowed = True
     
-    def _run(self, problem: str, max_iterations: int = None) -> str:
+    def _run(self, problem: str, max_iterations: Optional[int] = None) -> str:
         """Synchronous wrapper for async workflow."""
         return asyncio.run(self._arun(problem, max_iterations))
     
-    async def _arun(self, problem: str, max_iterations: int = None) -> str:
+    async def _arun(self, problem: str, max_iterations: Optional[int] = None) -> str:
         """Run the complex workflow asynchronously."""
         # Use provided max_iterations or fall back to default from config
         iterations = max_iterations if max_iterations is not None else self.default_max_iterations
