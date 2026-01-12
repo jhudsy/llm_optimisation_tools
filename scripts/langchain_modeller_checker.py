@@ -51,8 +51,8 @@ async def main():
         "-i",
         "--iterations",
         type=int,
-        default=5,
-        help="Max modeller-checker iterations (default: 5)",
+        default=None,
+        help="Max modeller-checker iterations (default from config.yaml)",
     )
     parser.add_argument(
         "--config",
@@ -83,7 +83,12 @@ async def main():
         )
     
     # Load config and create LLMs
+    config = load_config(args.config)
     modeller_llm, checker_llm = create_llms_from_config(args.config)
+    
+    # Get max_iterations from config if not provided via CLI
+    workflow_config = config.get("workflow", {})
+    max_iterations = args.iterations if args.iterations is not None else workflow_config.get("max_iterations", 5)
     
     # Create tools
     validate_tool = create_validate_minizinc_tool()
@@ -96,7 +101,7 @@ async def main():
         checker_llm=checker_llm,
         validate_tool=validate_tool,
         solve_tool=solve_tool,
-        max_iterations=args.iterations,
+        max_iterations=max_iterations,
         verbose=args.verbose,
     )
     

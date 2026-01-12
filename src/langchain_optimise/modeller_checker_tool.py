@@ -125,8 +125,8 @@ def create_modeller_checker_tool(
     config = load_config(config_path)
     modeller_llm, checker_llm = create_llms_from_config(config_path)
     
-    # Get workflow config
-    workflow_config = config.get("modeller_checker", {}).get("workflow", {})
+    # Get workflow config (load_config already returns the modeller_checker dict)
+    workflow_config = config.get("workflow", {})
     default_max_iterations = workflow_config.get("max_iterations", 5)
     solver_backend = workflow_config.get("solver_backend", "coinbc")
     # Map 'mzn' to 'coinbc' for backwards compatibility

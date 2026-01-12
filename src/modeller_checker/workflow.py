@@ -24,7 +24,7 @@ sys.path.insert(0, str(repo_root / "src"))
 LOGGER = logging.getLogger("modeller_checker.workflow")
 
 
-MODELLER_SYSTEM_PROMPT = """You are an expert MiniZinc modelling assistant. Your role is to:
+MODELLER_SYSTEM_PROMPT = """You are an expert problem analyst and MiniZinc modelling assistant. Your role is to:
 1. Take a problem description from the user
 2. Create or refine a MiniZinc model that represents the problem
 3. Ensure the model has correct MiniZinc syntax (must use 'solve maximize' or 'solve minimize', not just 'maximize' or 'minimize')
