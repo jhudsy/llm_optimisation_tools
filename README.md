@@ -21,11 +21,16 @@ Production-ready Model Context Protocol (MCP) server suite for optimization prob
 - **MCP integration** via stdio or HTTP
 
 #### 3. **Modeller-Checker Workflow** (`src/modeller_checker/`)
-- **Dual-agent AI system** - separate modeller and checker LLMs
+- **Two workflow modes:**
+  - **Simple (2-agent)**: Modeller + Checker for quick problems
+  - **Complex (5-agent)**: Formulator → Equation Checker → Translator → Code Checker → Solver Executor
 - **Automatic model generation** from problem descriptions
 - **Validation & refinement** loop ensures correctness
+- **Intelligent error routing** in complex mode
 - **Multi-provider support** - mix local (Ollama) and cloud (OpenAI, Anthropic, Azure) LLMs
 - **Three integration paths** - MCP server, LangChain tool, CLI
+
+See [docs/COMPLEX_WORKFLOW.md](docs/COMPLEX_WORKFLOW.md) for detailed complex workflow documentation.
 
 ## Quick Start
 
@@ -57,6 +62,7 @@ mzn:
 
 # Modeller-Checker (Dual-Agent AI)
 modeller_checker:
+  # Simple 2-agent workflow
   modeller:
     provider: "ollama"
     model: "qwen3"
@@ -65,8 +71,32 @@ modeller_checker:
     provider: "ollama"
     model: "qwen3"
     temperature: 0.3
+  
+  # Complex 5-agent workflow (optional)
+  formulator:
+    provider: "ollama"
+    model: "qwen3"
+    temperature: 0.5
+  equation_checker:
+    provider: "ollama"
+    model: "qwen3"
+    temperature: 0.3
+  translator:
+    provider: "ollama"
+    model: "qwen3"
+    temperature: 0.4
+  code_checker:
+    provider: "ollama"
+    model: "qwen3"
+    temperature: 0.2
+  solver_executor:
+    provider: "ollama"
+    model: "qwen3"
+    temperature: 0.3
+  
   workflow:
-    max_iterations: 5
+    mode: "simple"  # "simple" (2-agent) or "complex" (5-agent)
+    max_iterations: 10
   mcp_server:
     http_port: 8767
 ```
@@ -125,23 +155,35 @@ print(result)
 
 #### Modeller-Checker Workflow
 ```bash
-# Start MCP server
+# Start MCP server (exposes both simple and complex workflows)
 python -m src.modeller_checker.mcp --stdio    # stdio
 python -m src.modeller_checker.mcp --http     # HTTP on port 8767
 
-# CLI usage
+# Simple 2-agent workflow
 python scripts/langchain_modeller_checker.py -v \
   -p "We have 110 acres. Plant wheat or corn to maximize profit..."
 
-# LangChain tool
+# Complex 5-agent workflow
+python scripts/complex_workflow_test.py -v \
+  -p "We have 110 acres. Plant wheat or corn to maximize profit..."
+
+# LangChain tools
 python examples/modeller_checker_example.py
 
-# Python API
+# Python API - Simple workflow
 from langchain_optimise.modeller_checker_tool import create_modeller_checker_tool
 tool = create_modeller_checker_tool(verbose=True)
 result = tool.invoke({
     "problem": "Maximize x+y subject to x+y<=100, x>=0, y>=0",
-    "max_iterations": 5
+    "max_iterations": 10
+})
+
+# Python API - Complex workflow
+from langchain_optimise.complex_workflow_tool import create_complex_workflow_tool
+tool = create_complex_workflow_tool(verbose=True)
+result = tool.invoke({
+    "problem": "Maximize x+y subject to x+y<=100, x>=0, y>=0",
+    "max_iterations": 10
 })
 ```
 

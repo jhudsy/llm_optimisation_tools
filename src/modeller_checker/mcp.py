@@ -17,8 +17,9 @@ sys.path.insert(0, str(repo_root / "src"))
 from fastmcp import FastMCP
 from langchain_core.messages import BaseMessage
 
-from modeller_checker.config import load_config, create_llms_from_config
+from modeller_checker.config import load_config, create_llms_from_config, create_complex_workflow_llms
 from modeller_checker.workflow import run_modeller_checker_workflow
+from modeller_checker.complex_workflow import run_complex_workflow
 from mzn.solver import MiniZincSolver
 from langchain_optimise.minizinc_tools import (
     create_validate_minizinc_tool,
@@ -31,6 +32,11 @@ from langchain_optimise.minizinc_tools import (
 _config = None
 _modeller_llm = None
 _checker_llm = None
+_formulator_llm = None
+_equation_checker_llm = None
+_translator_llm = None
+_code_checker_llm = None
+_solver_executor_llm = None
 _validate_tool = None
 _solve_tool = None
 
@@ -38,10 +44,18 @@ _solve_tool = None
 def load_server_config(config_path: str = None):
     """Load configuration and initialize LLMs."""
     global _config, _modeller_llm, _checker_llm, _validate_tool, _solve_tool
+    global _formulator_llm, _equation_checker_llm, _translator_llm, _code_checker_llm, _solver_executor_llm
     
     try:
         _config = load_config(config_path)
+        
+        # Load LLMs for simple 2-agent workflow
         _modeller_llm, _checker_llm = create_llms_from_config(config_path)
+        
+        # Load LLMs for complex 5-agent workflow
+        (_formulator_llm, _equation_checker_llm, _translator_llm, 
+         _code_checker_llm, _solver_executor_llm) = create_complex_workflow_llms(config_path)
+        
         _validate_tool = create_validate_minizinc_tool()
         
         # Get solver backend from config (default to coinbc)
@@ -123,6 +137,59 @@ Iterations: {result['iterations']}
         
         return response
     
+    @mcp_app.tool()
+    async def complex_workflow(problem: str, max_iterations: int = None) -> str:
+        """
+        Complex 5-agent workflow for optimization problem modeling.
+        
+        Uses specialized agents for:
+        - Formulation: Problem → Mathematical equations
+        - Equation checking: Validates equations match problem
+        - Translation: Equations → MiniZinc code
+        - Code checking: Validates MiniZinc implementation
+        - Solver execution: Runs solver and diagnoses errors
+        
+        Args:
+            problem: Natural language problem description
+            max_iterations: Max refinement iterations (default from config)
+        
+        Returns:
+            Solution with formulation, MiniZinc model, and optimal values
+        """
+        workflow_config = _config.get("workflow", {})
+        verbose = workflow_config.get("verbose", False)
+        iterations = max_iterations if max_iterations is not None else workflow_config.get("max_iterations", 10)
+        
+        result = await run_complex_workflow(
+            problem=problem,
+            formulator_llm=_formulator_llm,
+            equation_checker_llm=_equation_checker_llm,
+            translator_llm=_translator_llm,
+            code_checker_llm=_code_checker_llm,
+            solver_executor_llm=_solver_executor_llm,
+            validate_tool=_validate_tool,
+            solve_tool=async_solve_tool,
+            max_iterations=iterations,
+            verbose=verbose,
+        )
+        
+        response = f"""Success: {result['success']}
+Iterations: {result['iterations']}
+Workflow Trace: {' -> '.join(result['workflow_trace'])}
+
+{result['final_response']}
+"""
+        
+        if result.get('formulation'):
+            from modeller_checker.complex_workflow import format_formulation_for_display
+            response += f"\n{'='*60}\nMATHEMATICAL FORMULATION\n{'='*60}\n"
+            response += format_formulation_for_display(result['formulation'])
+        
+        if result.get('mzn_code'):
+            response += f"\n\n{'='*60}\nMINIZINC MODEL\n{'='*60}\n{result['mzn_code']}"
+        
+        return response
+    
     await mcp_app.run_stdio_async(show_banner=False)
 
 
@@ -190,6 +257,59 @@ Iterations: {result['iterations']}
         
         if result['mzn_code']:
             response += f"\nMiniZinc Model:\n{result['mzn_code']}"
+        
+        return response
+    
+    @mcp_app.tool()
+    async def complex_workflow(problem: str, max_iterations: int = None) -> str:
+        """
+        Complex 5-agent workflow for optimization problem modeling.
+        
+        Uses specialized agents for:
+        - Formulation: Problem → Mathematical equations
+        - Equation checking: Validates equations match problem
+        - Translation: Equations → MiniZinc code
+        - Code checking: Validates MiniZinc implementation
+        - Solver execution: Runs solver and diagnoses errors
+        
+        Args:
+            problem: Natural language problem description
+            max_iterations: Max refinement iterations (default from config)
+        
+        Returns:
+            Solution with formulation, MiniZinc model, and optimal values
+        """
+        workflow_config = _config.get("workflow", {})
+        verbose = workflow_config.get("verbose", False)
+        iterations = max_iterations if max_iterations is not None else workflow_config.get("max_iterations", 10)
+        
+        result = await run_complex_workflow(
+            problem=problem,
+            formulator_llm=_formulator_llm,
+            equation_checker_llm=_equation_checker_llm,
+            translator_llm=_translator_llm,
+            code_checker_llm=_code_checker_llm,
+            solver_executor_llm=_solver_executor_llm,
+            validate_tool=_validate_tool,
+            solve_tool=async_solve_tool,
+            max_iterations=iterations,
+            verbose=verbose,
+        )
+        
+        response = f"""Success: {result['success']}
+Iterations: {result['iterations']}
+Workflow Trace: {' -> '.join(result['workflow_trace'])}
+
+{result['final_response']}
+"""
+        
+        if result.get('formulation'):
+            from modeller_checker.complex_workflow import format_formulation_for_display
+            response += f"\n{'='*60}\nMATHEMATICAL FORMULATION\n{'='*60}\n"
+            response += format_formulation_for_display(result['formulation'])
+        
+        if result.get('mzn_code'):
+            response += f"\n\n{'='*60}\nMINIZINC MODEL\n{'='*60}\n{result['mzn_code']}"
         
         return response
     
