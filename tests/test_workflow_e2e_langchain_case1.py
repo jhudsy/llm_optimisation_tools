@@ -124,7 +124,12 @@ def test_e2e_langchain_case1_real_models():
         if result.get("success"):
             print("✓ Workflow succeeded!")
             print()
-            print("Solution variables:")
+            print("Approved Mathematical Formulation:")
+            print("-" * 80)
+            print(result.get("approved_formulation", "N/A"))
+            print("-" * 80)
+            print()
+            print("Solution (all decision variables + objective):")
             for var, val in result.get("solution", {}).items():
                 print(f"  {var} = {val}")
             print()
@@ -144,9 +149,9 @@ def test_e2e_langchain_case1_real_models():
             print(f"Final response: {result.get('final_response', 'N/A')}")
         
         print()
-        print("Generated MiniZinc code:")
+        print("Approved MiniZinc code:")
         print("-" * 80)
-        print(result.get("mzn_code", "N/A"))
+        print(result.get("approved_mzn_code", result.get("mzn_code", "N/A")))
         print("-" * 80)
 
         assert isinstance(result, dict)

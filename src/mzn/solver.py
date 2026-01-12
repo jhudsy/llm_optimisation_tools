@@ -206,12 +206,16 @@ class MiniZincSolver:
                         variables[name] = val
                 status_str = "success" if variables else "success"
 
+            # Add objective value to variables dict so it's included in solution output
+            if objective_value is not None:
+                variables["objective"] = objective_value
+            
             summary_lines = [f"MiniZinc solve completed with status: {status_str}"]
             if objective_value is not None:
                 summary_lines.append(f"Objective value = {objective_value}")
             if variables:
-                summary_lines.append("Variables (first 10 shown):")
-                for name, value in list(variables.items())[:10]:
+                summary_lines.append("Variables (all shown):")
+                for name, value in variables.items():
                     summary_lines.append(f"  {name} = {value}")
 
             # Map status to success/failure
@@ -345,12 +349,16 @@ class MiniZincSolver:
                         variables[name] = val
                 status_str = "success" if variables else "success"
 
+            # Add objective value to variables dict so it's included in solution output
+            if objective_value is not None:
+                variables["objective"] = objective_value
+            
             summary_lines = [f"MiniZinc solve completed with status: {status_str}"]
             if objective_value is not None:
                 summary_lines.append(f"Objective value = {objective_value}")
             if variables:
-                summary_lines.append("Variables (first 10 shown):")
-                for name, value in list(variables.items())[:10]:
+                summary_lines.append("Variables (all shown):")
+                for name, value in variables.items():
                     summary_lines.append(f"  {name} = {value}")
 
             # Map status to success/failure

@@ -285,7 +285,9 @@ async def run_workflow(
         "success": False,
         "final_response": None,
         "formulation": None,
+        "approved_formulation": None,
         "mzn_code": None,
+        "approved_mzn_code": None,
         "solution": None,
         "solver_output": None,
         "workflow_trace": []  # Track which agents were invoked
@@ -385,6 +387,7 @@ async def run_workflow(
                 state.phase = "translation"
                 state.last_feedback = None
                 results["formulation"] = state.current_formulation
+                results["approved_formulation"] = state.current_equations  # Human-readable version
             else:
                 if verbose:
                     print(f"✗ Equations rejected: {checker_json.get('reasoning', 'Unknown')}")
@@ -493,6 +496,7 @@ async def run_workflow(
                 state.phase = "solving"
                 state.last_feedback = None
                 results["mzn_code"] = state.current_mzn_code
+                results["approved_mzn_code"] = state.current_mzn_code  # Final approved code
             else:
                 if verbose:
                     print(f"✗ Code rejected: {code_checker_json.get('reasoning', 'Unknown')}")
