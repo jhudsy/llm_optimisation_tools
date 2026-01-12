@@ -88,8 +88,8 @@ def test_e2e_langchain_case1_real_models():
         problem = (
             "A company finds itself with spare capacity in its batch production facility. "
             "Up to 20 hours/week reactor capacity, 10 hours/week crystalliser and 5 hours/week centrifuge are available. "
-            "Three products A, B and C might be manufactured using this capacity. Requirements (hours per batch):\\n"
-            "Reactor: A=0.8, B=0.2, C=0.3; Crystalliser: A=0.4, B=0.3; Centrifuge: A=0.2, C=0.1.\\n"
+            "Three products A, B and C might be manufactured using this capacity. Requirements (hours per batch):\n"
+            "Reactor: A=0.8, B=0.2, C=0.3; Crystalliser: A=0.4, B=0.3; Centrifuge: A=0.2, C=0.1.\n"
             "There is a sales limit equivalent to 20 batches/week for product C, but none for A or B. "
             "The profit per batch is £20, £6 and £8 for A, B and C respectively. "
             "Batches are whole numbers (integer decision variables). Find the optimal weekly production schedule."
@@ -127,6 +127,15 @@ def test_e2e_langchain_case1_real_models():
             print("Solution variables:")
             for var, val in result.get("solution", {}).items():
                 print(f"  {var} = {val}")
+            print()
+            print("Solver output details:")
+            if result.get("solver_output"):
+                solver_out = result["solver_output"]
+                print(f"  Solver: {solver_out.get('solver_name', 'N/A')}")
+                print(f"  Backend: {solver_out.get('solver_backend', 'N/A')}")
+                print(f"  Status: {solver_out.get('run_status', 'N/A')}")
+                print(f"  Objective value: {solver_out.get('objective_value', 'N/A')}")
+                print(f"  Summary: {solver_out.get('summary', 'N/A')}")
             print()
             print("Final response:")
             print(result.get("final_response", "N/A"))

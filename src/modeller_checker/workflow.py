@@ -517,6 +517,13 @@ async def run_workflow(
             if solve_result.get("run_status") == "success":
                 results["success"] = True
                 results["solution"] = solve_result.get("variables", {})
+                results["solver_output"] = {
+                    "solver_name": solve_result.get("solver_name"),
+                    "solver_backend": solve_result.get("solver_backend"),
+                    "run_status": solve_result.get("run_status"),
+                    "objective_value": solve_result.get("objective_value"),
+                    "summary": solve_result.get("summary"),
+                }
                 results["final_response"] = (
                     f"Optimal solution found:\n{solve_result.get('variables', {})}\n\n"
                     f"Summary: {solve_result.get('summary', 'Success')}"
@@ -524,6 +531,10 @@ async def run_workflow(
                 
                 if verbose:
                     print(f"✓ SUCCESS: Solution found")
+                    print(f"  Solver: {solve_result.get('solver_name', 'N/A')}")
+                    print(f"  Backend: {solve_result.get('solver_backend', 'N/A')}")
+                    print(f"  Objective value: {solve_result.get('objective_value', 'N/A')}")
+                    print(f"  Summary: {solve_result.get('summary', 'N/A')}")
                 
                 return results
             else:

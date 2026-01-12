@@ -41,3 +41,7 @@ src = ["src", "tests"]
 [tool.pytest.ini_options]
 addopts = "-ra"
 pythonpath = ["src"]
+console_output_style = "progress"
+markers = [
+    "e2e: end-to-end integration tests",
+]

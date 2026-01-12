@@ -39,7 +39,7 @@ modeller_checker:
   
   # Workflow Settings
   workflow:
-    max_iterations: 10
+    max_iterations: 20
     verbose: false
   
   # MCP Server Settings
@@ -52,7 +52,7 @@ modeller_checker:
   
   # LLM Defaults
   llm_defaults:
-    default_max_tokens: 2048
+    default_max_tokens: 8192
 
 # =============================================================================
 # MiniZinc Solver Configuration (used by workflow)
