@@ -1,6 +1,6 @@
-# Complex 5-Agent Workflow
+# Optimization Workflow
 
-The complex workflow extends the simple 2-agent workflow with specialized agents for each stage of optimization problem solving.
+The optimization workflow uses 5 specialized agents for each stage of optimization problem solving.
 
 ## Architecture
 
@@ -89,7 +89,6 @@ modeller_checker:
     temperature: 0.3
   
   workflow:
-    mode: "complex"  # Set to "simple" for 2-agent workflow
     max_iterations: 10
 ```
 
@@ -100,7 +99,7 @@ You can use different models for each agent, or even different providers (e.g., 
 ### CLI Script
 
 ```bash
-python scripts/complex_workflow_test.py \
+python scripts/workflow_test.py \
   --problem "Your optimization problem..." \
   --verbose \
   --iterations 10
@@ -109,9 +108,9 @@ python scripts/complex_workflow_test.py \
 ### LangChain Tool
 
 ```python
-from langchain_optimise.complex_workflow_tool import create_complex_workflow_tool
+from langchain_optimise.workflow_tool import create_optimization_workflow_tool
 
-tool = create_complex_workflow_tool(verbose=True)
+tool = create_optimization_workflow_tool(verbose=True)
 result = tool.invoke({
     "problem": "We have 110 acres...",
     "max_iterations": 10
@@ -120,27 +119,24 @@ result = tool.invoke({
 
 ### MCP Server
 
-Both workflows are exposed via MCP:
+The workflow is exposed via MCP:
 
 ```python
-# Simple 2-agent workflow
-modeller_checker_workflow(problem="...", max_iterations=10)
-
-# Complex 5-agent workflow
-complex_workflow(problem="...", max_iterations=10)
+optimization_workflow(problem="...", max_iterations=10)
 ```
 
-## Benefits Over Simple Workflow
+## Key Benefits
 
 1. **Separation of Concerns**: Each agent has a specific, focused role
-2. **Better Error Routing**: Intelligent feedback to the right agent
+2. **Intelligent Error Routing**: Feedback directed to the right agent based on error type
 3. **Mathematical Validation**: Explicit formulation step before coding
 4. **Clearer Debugging**: Workflow trace shows which agents were involved
 5. **Flexibility**: Can swap different models for different roles
+6. **Thorough Validation**: Multiple checkpoints ensure correctness
 
 ## Output
 
-The complex workflow provides:
+The workflow provides:
 - Workflow trace (which agents were invoked)
 - Mathematical formulation (variables, constraints, objective)
 - MiniZinc code
@@ -178,16 +174,3 @@ constraint wheat + corn <= 110;
 constraint 3*wheat + 2*corn <= 240;
 solve maximize 40*wheat + 30*corn;
 ```
-
-## When to Use
-
-**Use Complex Workflow when:**
-- You need explicit mathematical formulation
-- Problem requires careful validation at each stage
-- You want detailed workflow tracing
-- Different expertise levels for different agents
-
-**Use Simple Workflow when:**
-- Problem is straightforward
-- Speed is priority
-- Don't need mathematical formulation separate from code
