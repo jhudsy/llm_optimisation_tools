@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 # Add src to path
 repo_root = Path(__file__).resolve().parents[2]
@@ -44,6 +44,8 @@ class WorkflowInput(BaseModel):
 class OptimizationWorkflowTool(BaseTool):
     """LangChain tool for optimization workflow."""
     
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     name: str = "optimization_workflow"
     description: str = (
         "Multi-agent workflow for optimization problem modeling. "
@@ -67,9 +69,6 @@ class OptimizationWorkflowTool(BaseTool):
     solve_tool: Optional[object] = None
     verbose: bool = False
     default_max_iterations: int = 10
-    
-    class Config:
-        arbitrary_types_allowed = True
     
     def _run(self, problem: str, max_iterations: Optional[int] = None) -> str:
         """Synchronous wrapper for async workflow."""

@@ -287,6 +287,7 @@ async def run_workflow(
         "formulation": None,
         "mzn_code": None,
         "solution": None,
+        "solver_output": None,
         "workflow_trace": []  # Track which agents were invoked
     }
     
