@@ -87,6 +87,8 @@ def test_e2e_langchain_case1_real_models():
         # Read max_iterations from config
         config = load_config(None)
         max_iterations = config.get("modeller_checker", {}).get("workflow", {}).get("max_iterations", 10)
+        print(f"\n[CONFIG] Case 1: max_iterations from config: {max_iterations}")
+        print(f"[CONFIG] Full workflow section: {config.get('modeller_checker', {}).get('workflow', {})}")
 
         # Problem statement (explicitly require integer batches for a known optimum)
         problem = (
@@ -230,6 +232,9 @@ def test_e2e_langchain_case2_multi_product_lot_sizing():
         # Read max_iterations from config
         config = load_config(None)
         max_iterations = config.get("modeller_checker", {}).get("workflow", {}).get("max_iterations", 10)
+        print(f"\n[CONFIG] Case 2: max_iterations from config: {max_iterations}")
+        print(f"[CONFIG] Full workflow section: {config.get('modeller_checker', {}).get('workflow', {})}")
+        
         problem = """
         A company produces 5 different products over a planning horizon of 6 periods.
         Customer demand is deterministic and must be met on time; backlogging is not allowed, 
