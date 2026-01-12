@@ -209,6 +209,40 @@ def format_formulation_for_display(formulation: dict) -> str:
     return "\n".join(lines)
 
 
+def normalize_minizinc_bounds(mzn_code: str) -> str:
+    """Rewrite inline bound syntax into separate constraints for MiniZinc."""
+    if not mzn_code:
+        return mzn_code
+
+    output_lines: list[str] = []
+
+    lower_only = re.compile(r"var\s+(int|float)\s*:\s*([A-Za-z_][A-Za-z0-9_]*)\s*>=\s*([-+]?\d+(?:\.\d+)?)\s*;\s*$")
+    both_bounds = re.compile(r"var\s+(int|float)\s*:\s*([A-Za-z_][A-Za-z0-9_]*)\s*>=\s*([-+]?\d+(?:\.\d+)?)\s*,\s*\2\s*<=\s*([-+]?\d+(?:\.\d+)?)\s*;\s*$")
+
+    for line in mzn_code.splitlines():
+        stripped = line.strip()
+        indent = line[: len(line) - len(stripped)]
+
+        both_match = both_bounds.match(stripped)
+        if both_match:
+            vtype, name, lower, upper = both_match.groups()
+            output_lines.append(f"{indent}var {vtype}: {name};")
+            output_lines.append(f"{indent}constraint {name} >= {lower};")
+            output_lines.append(f"{indent}constraint {name} <= {upper};")
+            continue
+
+        lower_match = lower_only.match(stripped)
+        if lower_match:
+            vtype, name, lower = lower_match.groups()
+            output_lines.append(f"{indent}var {vtype}: {name};")
+            output_lines.append(f"{indent}constraint {name} >= {lower};")
+            continue
+
+        output_lines.append(line)
+
+    return "\n".join(output_lines)
+
+
 # ============================================================================
 # MAIN WORKFLOW
 # ============================================================================
@@ -399,6 +433,9 @@ async def run_workflow(
                 if verbose:
                     print("ERROR: MiniZinc code is empty")
                 continue
+
+            # Normalize inline bounds (e.g., "var int: x >= 0;") into constraints MiniZinc accepts
+            state.current_mzn_code = normalize_minizinc_bounds(state.current_mzn_code)
             
             if verbose:
                 print(f"MiniZinc code generated:\n{state.current_mzn_code[:200]}...")
